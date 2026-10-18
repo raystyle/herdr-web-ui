@@ -30,6 +30,8 @@ const buildRevision: Plugin = {
 };
 
 export default defineConfig({
+  // [v3] 相对资产基址:资产 URL 相对于页面路径解析,支持网关 /i/{id}/ 前缀部署
+  base: "./",
   plugins: [react(), thirdPartyNotices, buildRevision, compressedAssets(), serviceWorkerBuild()],
   define: {
     __APP_REVISION__: JSON.stringify(revision),

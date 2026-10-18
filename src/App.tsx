@@ -665,7 +665,7 @@ export function App() {
       id: machine.id,
       snapshot: machine.snapshot && { panes: machine.snapshot.panes.map((pane) => ({ pane_id: pane.pane_id, agent_status: alertStatus(pane.agent_status, (pane as HerdrPane).background_wait) })) },
     }));
-    const events = new EventSource("/api/machines/events");
+    const events = new EventSource(window.location.pathname.replace(/\/[^/]*$/, "") + "/api/machines/events");
     events.onmessage = (event) => {
       let payload: MachineEvent;
       try { payload = JSON.parse(event.data); } catch { return; }

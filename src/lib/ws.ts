@@ -85,7 +85,9 @@ interface AttachState {
 
 function defaultUrl(): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/ws`;
+  // [v3] 带部署基址前缀(网关 /i/{id}/ 代理形态),根部署时为空串
+  const base = window.location.pathname.replace(/\/[^/]*$/, "");
+  return `${protocol}//${window.location.host}${base}/ws`;
 }
 
 /**

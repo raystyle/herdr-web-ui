@@ -15,6 +15,18 @@ import { isReportableWindowError } from "./lib/uncaughtErrors.ts";
 import "./lib/viewport.ts";
 import { watchSheetExits } from "./lib/sheets.ts";
 
+// [v3] 部署基址前缀(网关 /i/{id}/ 代理形态):从页面路径导出,根部署为空串。
+// 最小 hack 面:根相对 URL 经此补前缀;绝对 URL 与非 / 开头原样。
+export const basePath = window.location.pathname.replace(/\/[^/]*$/, "");
+{
+  const orig = window.fetch.bind(window);
+  window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const patched = url.startsWith("/") ? basePath + url : url;
+    return orig(patched, init);
+  }) as typeof window.fetch;
+}
+
 // a phone's sheets drop back down however they close (lib/sheets.ts)
 watchSheetExits();
 
