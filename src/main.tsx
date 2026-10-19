@@ -63,7 +63,9 @@ async function boot() {
     if (gated) {
       createRoot(root).render(
         <StrictMode>
-          <LoginGate onAuthed={() => { window.location.href = "/" }} />
+          <SettingsProvider>
+            <LoginGate onAuthed={() => { window.location.href = "/" }} />
+          </SettingsProvider>
         </StrictMode>,
       );
       return;
