@@ -2302,6 +2302,19 @@ if (import.meta.main) {
     console.error(`herdr web ui cannot listen on ${host}:${port}: ${reason}.`);
     process.exit(1);
   }
+  // [v3] fork 拒启(G0 grok 令2):空 token=敞开模式是部署级洞,先前只
+  // warn 不拒;trim 后空与未设置等价。listen 已成,但尚未 telemetry/serve,
+  // 在此拒启=零服务窗口。HOST=127.0.0.1 同样拒:反代会把任意来源变成回环。
+  {
+    const configured = (process.env["HERDR_WEB_TOKEN"] ?? "").trim();
+    if (configured === "") {
+      console.error(
+        "herdr web ui refuses to start: HERDR_WEB_TOKEN is empty or unset. An empty token leaves every connection (loopback included, so any reverse proxy in front of it) fully trusted. Set HERDR_WEB_TOKEN to a long random string.",
+      );
+      instance.stop();
+      process.exit(1);
+    }
+  }
   telemetry.start();
   let stopping = false;
   const shutdown = () => {
