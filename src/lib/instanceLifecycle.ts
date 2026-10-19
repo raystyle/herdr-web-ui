@@ -1,8 +1,10 @@
 // [v3 F3] 实例生命周期(网关 REST,网关域会话 cookie;origin 绝对 URL
-// 绕基址 fetch 补丁)。类型位:kind=system|app(app F5 役,面暂禁用)。
+// 绕基址 fetch 补丁)。类型位:kind=system|app(app F5 役,面暂禁用);
+// agents=首启自动编排多选(pi/claude/codex,缺省 ["pi"])。
 const GATEWAY = window.location.origin
 
 export type InstanceKind = "system" | "app"
+export type AgentKind = "pi" | "claude" | "codex"
 
 export interface InstanceRow {
   id: string
@@ -32,8 +34,8 @@ async function call<T = unknown>(method: string, path: string, body?: unknown): 
   }
 }
 
-export function createInstance(name: string, kind: InstanceKind = "system") {
-  return call<InstanceRow>("POST", "/instances", { name, agentType: "pi-rs", kind })
+export function createInstance(name: string, kind: InstanceKind = "system", agents: AgentKind[] = ["pi"]) {
+  return call<InstanceRow>("POST", "/instances", { name, agentType: "pi-rs", kind, agents })
 }
 export function wakeInstance(publicId: string) {
   return call<InstanceRow>("POST", `/instances/${publicId}/start`)

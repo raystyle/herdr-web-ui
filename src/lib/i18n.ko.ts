@@ -1379,6 +1379,7 @@ export const KO: Record<string, string> = {
   "App container": "앱 컨테이너",
   "agent-only, no desktop": "에이전트 전용, 데스크톱 없음",
   "Coming in F5": "F5에서 제공",
+  "Startup agents": "시작 에이전트",
   "Pause": "일시정지",
   "Destroy": "삭제",
   "Create": "만들기",

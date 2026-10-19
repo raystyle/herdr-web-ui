@@ -1,15 +1,18 @@
 // [v3 F3] 实例生命周期对话框+行操作(总控台内建实例管理):
-// 新建(名+类型位 system|app)、暂停/唤醒/销毁(经网关 REST,cookie)。
+// 新建(名+类型位 system|app+首启 agent 多选 pi/claude/codex)、暂停/
+// 唤醒/销毁(经网关 REST,cookie)。
 import { useState } from "react";
-import { Monitor, Pause, Play, Plus, Trash2 } from "lucide-react";
+import { Bot, Monitor, Pause, Play, Plus, Trash2 } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
-import { createInstance, type InstanceKind } from "../lib/instanceLifecycle.ts";
+import { createInstance, type AgentKind, type InstanceKind } from "../lib/instanceLifecycle.ts";
 
-/** 新建实例对话框(类型位:system 现役|app F5 役占位禁用)。 */
+/** 新建实例对话框(类型位:system 现役|app F5 役占位禁用;首启 agent
+ * 多选:缺省 pi,可多选,全不勾=不编排——on-ready 钩子经 socket 道补建)。 */
 export function NewInstanceDialog({ onDone, onClose }: { onDone: (id: string) => void; onClose: () => void }) {
   const t = useT();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<InstanceKind>("system");
+  const [agents, setAgents] = useState<Record<AgentKind, boolean>>({ pi: true, claude: false, codex: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +20,8 @@ export function NewInstanceDialog({ onDone, onClose }: { onDone: (id: string) =>
     if (!name.trim() || busy) return
     setBusy(true)
     setError(null)
-    const r = await createInstance(name.trim(), kind)
+    const picked = (Object.keys(agents) as AgentKind[]).filter((k) => agents[k])
+    const r = await createInstance(name.trim(), kind, picked)
     setBusy(false)
     if (r.ok && r.data && typeof r.data === "object" && "id" in r.data) {
       onDone(String((r.data as { id: string }).id))
@@ -47,6 +51,17 @@ export function NewInstanceDialog({ onDone, onClose }: { onDone: (id: string) =>
             <Plus aria-hidden="true" />{t("App container")}
             <span style={{ color: "var(--text-dim)" }}>· {t("agent-only, no desktop")}</span>
           </label>
+        </fieldset>
+        {/* 首启 agent 多选:on-ready 编排(经 socket 道 workspace/agent.start);
+            kind 名直书(herdr kind 即 CLI 名,无译);全不勾=不编排 */}
+        <fieldset style={{ border: 0, margin: 0, padding: 0, display: "grid", gap: "0.3rem" }}>
+          <legend className="field-label" style={{ padding: 0 }}>{t("Startup agents")}</legend>
+          {(Object.keys(agents) as AgentKind[]).map((k) => (
+            <label key={k} style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+              <input type="checkbox" checked={agents[k]} onChange={() => setAgents((a) => ({ ...a, [k]: !a[k] }))} />
+              <Bot aria-hidden="true" />{k}
+            </label>
+          ))}
         </fieldset>
         {error && <p role="alert" style={{ color: "var(--danger-text)", margin: 0 }}>{error}</p>}
         <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>

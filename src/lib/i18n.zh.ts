@@ -1383,6 +1383,7 @@ export const ZH: Record<string, string> = {
   "App container": "应用容器",
   "agent-only, no desktop": "仅 agent,无桌面",
   "Coming in F5": "F5 役提供",
+  "Startup agents": "首启 agent",
   "Pause": "暂停",
   "Destroy": "销毁",
   "Create": "创建",

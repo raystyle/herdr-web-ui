@@ -1381,6 +1381,7 @@ export const JA: Record<string, string> = {
   "App container": "アプリコンテナ",
   "agent-only, no desktop": "エージェントのみ・デスクトップなし",
   "Coming in F5": "F5 で提供",
+  "Startup agents": "初回起動エージェント",
   "Pause": "一時停止",
   "Destroy": "破棄",
   "Create": "作成",
