@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Download, Monitor, Plus, Settings, SlidersHorizontal, Undo2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, FolderOpen, Monitor, Plus, Settings, SlidersHorizontal, Undo2, X } from "lucide-react";
 import type { Machine, MachineState, MachineUpdate } from "../../shared/machines.ts";
 import { MachineContext } from "../lib/machineContext.tsx";
 import { answerMachineSetup, machineRequest } from "../lib/api.ts";
@@ -29,6 +29,8 @@ export const STATE_WORD: Readonly<Record<MachineState, string>> = {
 
 interface Props { machines: Machine[]; selectedMachineId: string; selectedPaneId: string | null; actions: AppActions; onSelect(machineId: string, paneId: string | null): void; onNew(machineId: string): void; onSetup(machine: Machine, update?: boolean): void   /** [v3 F1] 打开实例桌面 dock(socket 型机器行) */
   onOpenDesktop?: (machineName: string, publicId: string) => void
+  /** [v3 F2] 打开实例文件 dock(socket 型机器行) */
+  onOpenFiles?: (machineName: string, publicId: string) => void
 }
 export function MachineSidebar(props: Props) {
   const t = useT();
@@ -126,6 +128,11 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
       {machine.kind === "socket" && props.onOpenDesktop && online && (
         <button className="sidebar-row-action machine-manage" aria-label={`${t("Desktop")} · ${machine.name}`} title={t("Desktop")} onClick={() => props.onOpenDesktop!(machine.name, machine.name.replace(/^instance-/, ""))}>
           <Monitor aria-hidden="true" />
+        </button>
+      )}
+      {machine.kind === "socket" && props.onOpenFiles && online && (
+        <button className="sidebar-row-action machine-manage" aria-label={`${t("Files")} · ${machine.name}`} title={t("Files")} onClick={() => props.onOpenFiles!(machine.name, machine.name.replace(/^instance-/, ""))}>
+          <FolderOpen aria-hidden="true" />
         </button>
       )}
       {machine.kind === "ssh" && <button className="sidebar-row-action machine-manage" aria-label={t("Manage {name}", { name: machine.name })} title={t("Manage PC")} aria-expanded={editing} onClick={() => { setEditing(!editing); setConfirmDelete(false); }}><SlidersHorizontal aria-hidden="true" /></button>}

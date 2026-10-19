@@ -37,6 +37,7 @@ import { headerCrumb, showsChat } from "./lib/headerCrumb.ts";
 import { LOCAL_MACHINE, paneStorageId, type Machine, type MachineEvent } from "../shared/machines.ts";
 import { controlConsole, instanceMachine } from "./lib/controlMode.ts";
 import { DesktopPanel } from "./components/DesktopPanel.tsx";
+import { InstanceFilesPanel } from "./components/InstanceFilesPanel.tsx";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
 import { applyPaneStatus } from "./lib/snapshot.ts";
 import { setAgentRowTokens } from "./lib/agentRowTokens.ts";
@@ -455,7 +456,15 @@ export function App() {
   const [desktopDock, setDesktopDock] = useState<{ machineName: string; publicId: string } | null>(null);
   const openDesktop = useCallback((machineName: string, publicId: string) => {
     setWebPage(null);
+    setFilesDock(null);
     setDesktopDock({ machineName, publicId });
+  }, []);
+  // [v3 F2] 实例文件 dock(与桌面 dock 同槽互斥)
+  const [filesDock, setFilesDock] = useState<{ machineName: string; publicId: string } | null>(null);
+  const openInstanceFiles = useCallback((machineName: string, publicId: string) => {
+    setWebPage(null);
+    setDesktopDock(null);
+    setFilesDock({ machineName, publicId });
   }, []);
   useEffect(() => {
     if (viewing !== null && fileDocked) setWebPage(null);
@@ -1648,7 +1657,7 @@ export function App() {
           {/* a sidebar that cannot be drawn leaves the panes working */}
           <RenderBoundary resetKey={null} fallback={(retry) => <RegionCrash message={t("The sidebar can't be shown.")} retry={retry} />}>
             <CrashProbe region="sidebar" />
-            <MachineSidebar machines={visibleMachines} onOpenDesktop={openDesktop} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
+            <MachineSidebar machines={visibleMachines} onOpenDesktop={openDesktop} onOpenFiles={openInstanceFiles} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
           </RenderBoundary>
           <SidebarResizer width={sidebarWidth} onResize={setSidebarWidth} />
         </aside>
@@ -1811,6 +1820,8 @@ export function App() {
           <WebPanel key={webPage} url={webPage} onClose={() => setWebPage(null)} panelStart={<FilePanelResizer width={filePanelWidth} onResize={setFilePanelWidth} />} />}
         {desktopDock !== null && filePanelAvailable && fileDocked === false &&
           <DesktopPanel key={desktopDock.publicId} machineName={desktopDock.machineName} publicId={desktopDock.publicId} onClose={() => setDesktopDock(null)} />}
+        {filesDock !== null && filePanelAvailable && fileDocked === false && desktopDock === null &&
+          <InstanceFilesPanel key={filesDock.publicId} machineName={filesDock.machineName} publicId={filesDock.publicId} onClose={() => setFilesDock(null)} />}
       </div>
 
       <MachineContext.Provider value={newSessionMachineId}><NewSessionDialog

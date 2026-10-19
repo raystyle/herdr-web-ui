@@ -22,6 +22,9 @@ export interface Machine {
   target?: SshTarget;
   /** kind==="socket":代理到远机 herdr socket 的本地 unix socket 路径(编排器 incus unix↔unix device) */
   socketPath?: string;
+  /** [v3] 最近一次机器消息(观察流 snapshot/pane 事件)时刻,epoch ms;null=未见活动。
+   *  网关 2h 空闲回收的第四信号:socket 道有活动即不入眠。 */
+  lastActivityAt?: number | null;
   enabled: boolean;
   state: MachineState;
   error: string | null;
