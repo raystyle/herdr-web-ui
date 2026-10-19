@@ -219,6 +219,14 @@ function encodings(header: string | null | undefined): Array<"br" | "gzip" | "id
 }
 
 /** `origin` is what requestOrigin answers; a caller that has no request (a QA script) may leave it out. */
+/** [v3 单页坍缩] 总控台部署旗注入:HERDR_WEB_CONSOLE=1 时 shell HTML
+ * 头部注入 window.__HX_CONSOLE__(客户端 controlMode 据此在根路径也
+ * 保持总控形态——实例视图/品牌/暗色钉)。 */
+function consoleShellFlag(html: string): string {
+  if (process.env["HERDR_WEB_CONSOLE"] !== "1") return html
+  return html.replace("<head>", `<head><script>window.__HX_CONSOLE__=1</script>`)
+}
+
 export async function serveStatic(pathname: string, acceptEncoding?: string | null, origin?: string): Promise<Response> {
   const indexPath = join(DIST_DIR, "index.html");
   if (!existsSync(indexPath)) {
@@ -244,6 +252,11 @@ export async function serveStatic(pathname: string, acceptEncoding?: string | nu
         return new Response(null, { status: 406, headers: { vary: "Accept-Encoding", ...cspHeader() } });
       }
       const kind = pathname === "/manifest.webmanifest" ? "manifest" : candidate === indexPath ? "shell" : null;
+      if (kind === "shell") {
+        return new Response(consoleShellFlag(await file.text()), {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": cacheControlFor(pathname), ...cspHeader(origin) },
+        })
+      }
       return new Response(await body(file, kind, origin), {
         headers: { "content-type": contentTypeFor(candidate), "cache-control": cacheControlFor(pathname), ...cspHeader(origin) },
       });
@@ -254,7 +267,7 @@ export async function serveStatic(pathname: string, acceptEncoding?: string | nu
   if (pathname.startsWith("/assets/") || pathname.startsWith("/icons/")) {
     return new Response(null, { status: 404, headers: { "cache-control": REVALIDATE, ...cspHeader() } });
   }
-  return new Response(await body(Bun.file(indexPath), "shell"), {
+  return new Response(consoleShellFlag(await Bun.file(indexPath).text()), {
     headers: { "content-type": "text/html; charset=utf-8", "cache-control": REVALIDATE, ...cspHeader(origin) },
   });
 }

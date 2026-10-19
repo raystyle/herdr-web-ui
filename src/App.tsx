@@ -39,6 +39,7 @@ import { controlConsole, instanceMachine } from "./lib/controlMode.ts";
 import { DesktopPanel } from "./components/DesktopPanel.tsx";
 import { InstanceFilesPanel } from "./components/InstanceFilesPanel.tsx";
 import { NewInstanceDialog } from "./components/InstanceDialogs.tsx";
+import { LoginGate, probeSession } from "./components/LoginGate.tsx";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
 import { applyPaneStatus } from "./lib/snapshot.ts";
 import { setAgentRowTokens } from "./lib/agentRowTokens.ts";
@@ -462,6 +463,12 @@ export function App() {
   }, []);
   // [v3 F3] 新建实例对话框(总控台内建;建后等 provision 完成进机器列表)
   const [newInstanceOpen, setNewInstanceOpen] = useState(false);
+  // [v3 单页坍缩] 登录门:未会话则挡整页(唯一第二屏);探测在挂载拍
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!controlConsole) { setAuthed(true); return }
+    void probeSession().then(setAuthed)
+  }, []);
   // [v3 F2] 实例文件 dock(与桌面 dock 同槽互斥)
   const [filesDock, setFilesDock] = useState<{ machineName: string; publicId: string } | null>(null);
   const openInstanceFiles = useCallback((machineName: string, publicId: string) => {
@@ -1514,7 +1521,8 @@ export function App() {
     // instead of a blank page
     return (
       <div className="app">
-        <header className="app-header">
+        {authed === false && controlConsole && <LoginGate onAuthed={() => setAuthed(true)} />}
+            <header className="app-header">
           <Brand />
         </header>
         <div className="app-body">
