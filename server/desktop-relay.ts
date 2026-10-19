@@ -36,9 +36,12 @@ export class DesktopRelay {
   private client?: ServerWebSocket<unknown>;
   private waiting: Buffer[] = [];
   private closed = false;
+  /** F-3 (kimi 终审): watch role sees the desktop but its input never lands. */
+  private readonly readOnly: boolean;
   readonly ready: Promise<void>;
 
-  constructor(target: DesktopTarget) {
+  constructor(target: DesktopTarget, readOnly = false) {
+    this.readOnly = readOnly;
     // Bun supports client headers; lib.dom's constructor overload hides that
     // option (same cast as authenticatedWebSocket). Binary both ways, and
     // acpsup REQUIRES the binary subprotocol declared at upgrade (it closes
@@ -95,12 +98,19 @@ export class DesktopRelay {
     this.waiting = [];
   }
 
-  /** Binary frame from the browser: straight up. */
+  /** Binary frame from the browser: straight up (watch role: input types dropped). */
   message(raw: string | Buffer): void {
     if (this.closed) return;
     if (this.upstream.readyState !== WebSocket.OPEN) {
       this.close(1012, "desktop upstream ended");
       return;
+    }
+    if (this.readOnly) {
+      // F-3 (kimi 终审): watch 只看不摸——RFB 客户端消息按型过滤:键(4)/
+      // 指针(5)/剪贴板入(6)弃;像素格式(0)/编码(2)/帧更新请求(3)是渲染
+      // 必需,放行,画面照流。noVNC 每 WS 帧恰一条 RFB 消息,首字节即型。
+      const type = typeof raw === "string" ? raw.charCodeAt(0) : raw[0];
+      if (type !== 0 && type !== 2 && type !== 3) return;
     }
     this.upstream.send(typeof raw === "string" ? raw : new Uint8Array(raw));
   }

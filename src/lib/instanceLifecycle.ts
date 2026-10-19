@@ -38,13 +38,13 @@ export function createInstance(name: string, kind: InstanceKind = "system", agen
   return call<InstanceRow>("POST", "/instances", { name, agentType: "pi-rs", kind, agents })
 }
 export function wakeInstance(publicId: string) {
-  return call<InstanceRow>("POST", `/instances/${publicId}/start`)
+  return call<InstanceRow>("POST", `/instances/${encodeURIComponent(publicId)}/start`)
 }
 export function pauseInstance(publicId: string) {
-  return call<InstanceRow>("POST", `/instances/${publicId}/stop`)
+  return call<InstanceRow>("POST", `/instances/${encodeURIComponent(publicId)}/stop`)
 }
 export function destroyInstance(publicId: string) {
-  return call<unknown>("DELETE", `/instances/${publicId}`)
+  return call<unknown>("DELETE", `/instances/${encodeURIComponent(publicId)}`)
 }
 export function listInstances() {
   return call<{ instances?: InstanceRow[]; instance?: InstanceRow[] } | InstanceRow[]>("GET", "/instances")

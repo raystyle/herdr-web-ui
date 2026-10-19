@@ -23,3 +23,6 @@ _film/
 
 # one-off screenshot and probe scripts kept inside the repo so imports resolve
 scripts/*.tmp.ts
+
+# G-2(kimi 终审):npm 锁不入场——本仓包管理一律 bun(bun.lock 带 integrity);npm ci 会用错锁炸 CI
+package-lock.json

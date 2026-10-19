@@ -8,7 +8,7 @@ const GATEWAY = window.location.origin
 
 export async function fetchDesktopPassword(publicId: string): Promise<string | null> {
   try {
-    const r = await fetch(`${GATEWAY}/api/v1/instances/${publicId}/vnc/desktop`, { credentials: "include" })
+    const r = await fetch(`${GATEWAY}/api/v1/instances/${encodeURIComponent(publicId)}/vnc/desktop`, { credentials: "include" })
     if (!r.ok) return null
     const info = (await r.json()) as { password?: string }
     return info.password ?? null
@@ -19,11 +19,11 @@ export async function fetchDesktopPassword(publicId: string): Promise<string | n
 
 export function desktopWsUrl(publicId: string): string {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:"
-  return `${proto}//${window.location.host}/i/${publicId}/desktop`
+  return `${proto}//${window.location.host}/i/${encodeURIComponent(publicId)}/desktop`
 }
 
 export function reportResolution(publicId: string, width: number, height: number): void {
-  void fetch(`${GATEWAY}/api/v1/instances/${publicId}/vnc/resolution`, {
+  void fetch(`${GATEWAY}/api/v1/instances/${encodeURIComponent(publicId)}/vnc/resolution`, {
     method: "POST",
     credentials: "include",
     headers: { "content-type": "application/json" },

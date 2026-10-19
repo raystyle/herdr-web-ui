@@ -1255,7 +1255,7 @@ export function createServer(
         if (access.level === "none") return unauthorizedJson(access.reason);
         const target = desktopTargetFromEnv();
         if (!target) return jsonResponse({ error: { code: "desktop_not_configured", message: "No desktop endpoint is configured on this server" } }, 503);
-        const desktopRelay = new DesktopRelay(target);
+        const desktopRelay = new DesktopRelay(target, readOnly); // F-3: watch 角色键鼠不得达桌面
         try {
           await desktopRelay.ready;
           const upgraded = bunServer.upgrade(request, { data: connectionData({ desktopRelay, deviceId: access.level === "full" ? access.device?.id : undefined, readOnly }) });
