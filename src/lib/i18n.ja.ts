@@ -1384,4 +1384,7 @@ export const JA: Record<string, string> = {
   "Pause": "一時停止",
   "Destroy": "破棄",
   "Create": "作成",
+  "User name": "ユーザー名",
+  "Passphrase": "パスワード",
+  "Access code": "アクセスコード",
 };

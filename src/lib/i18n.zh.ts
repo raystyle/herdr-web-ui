@@ -1386,4 +1386,7 @@ export const ZH: Record<string, string> = {
   "Pause": "暂停",
   "Destroy": "销毁",
   "Create": "创建",
+  "User name": "用户名",
+  "Passphrase": "密码",
+  "Access code": "验证码",
 };

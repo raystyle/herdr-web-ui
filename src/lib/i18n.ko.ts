@@ -1382,4 +1382,7 @@ export const KO: Record<string, string> = {
   "Pause": "일시정지",
   "Destroy": "삭제",
   "Create": "만들기",
+  "User name": "사용자 이름",
+  "Passphrase": "암호",
+  "Access code": "액세스 코드",
 };

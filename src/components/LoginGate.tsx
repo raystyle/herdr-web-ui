@@ -92,19 +92,19 @@ export function LoginGate({ onAuthed }: { onAuthed: () => void }) {
           <span style={{ fontSize: "1.15rem", fontWeight: 600 }}>皓玄</span>
         </div>
         <label className="field">
-          <span className="field-label">{t("Username")}</span>
+          <span className="field-label">{t("User name")}</span>
           <input className="input" value={username} autoComplete="username" onChange={(e) => setUsername(e.target.value)} />
         </label>
         <label className="field">
-          <span className="field-label">{t("Password")}</span>
+          <span className="field-label">{t("Passphrase")}</span>
           <input className="input" type="password" value={password} autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} />
         </label>
         <label className="field">
-          <span className="field-label">{t("Captcha")}</span>
+          <span className="field-label">{t("Access code")}</span>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <input className="input" value={code} maxLength={8} style={{ flex: 1 }} onChange={(e) => setCode(e.target.value)} />
             {captcha?.image
-              ? <img src={captcha.image} alt={t("Captcha")} height={34} style={{ cursor: "pointer", borderRadius: "4px" }} onClick={() => void refreshCaptcha()} />
+              ? <img src={captcha.image} alt={t("Access code")} height={34} style={{ cursor: "pointer", borderRadius: "4px" }} onClick={() => void refreshCaptcha()} />
               : <button type="button" className="icon-button" aria-label={t("Reload page")} onClick={() => void refreshCaptcha()}><RotateCw aria-hidden="true" /></button>}
           </div>
         </label>
