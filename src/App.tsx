@@ -38,6 +38,7 @@ import { LOCAL_MACHINE, paneStorageId, type Machine, type MachineEvent } from ".
 import { controlConsole, instanceMachine } from "./lib/controlMode.ts";
 import { DesktopPanel } from "./components/DesktopPanel.tsx";
 import { InstanceFilesPanel } from "./components/InstanceFilesPanel.tsx";
+import { listInstances } from "./lib/instanceLifecycle.ts";
 import { NewInstanceDialog } from "./components/InstanceDialogs.tsx";
 import { LoginGate, probeSession } from "./components/LoginGate.tsx";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
@@ -463,6 +464,21 @@ export function App() {
   }, []);
   // [v3 F3] 新建实例对话框(总控台内建;建后等 provision 完成进机器列表)
   const [newInstanceOpen, setNewInstanceOpen] = useState(false);
+  // [v3 F5] app 型实例公 id 集(桌面钮隐藏;低频拉——kind 只在建/销时变,
+  // 生命周期动毕与对话框建毕即刷,另备 60s 兜底轮询)
+  const [appInstanceIds, setAppInstanceIds] = useState<ReadonlySet<string>>(new Set());
+  const refreshAppInstances = useCallback(() => {
+    void listInstances().then((r) => {
+      const rows = Array.isArray(r.data) ? r.data : r.data?.instances ?? [];
+      setAppInstanceIds(new Set(rows.filter((row) => row.kind === "app").map((row) => row.id)));
+    }).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!controlConsole) return;
+    refreshAppInstances();
+    const timer = window.setInterval(refreshAppInstances, 60_000);
+    return () => window.clearInterval(timer);
+  }, [refreshAppInstances]);
   // [v3 单页坍缩] 登录门:未会话则挡整页(唯一第二屏);探测在挂载拍
   const [authed, setAuthed] = useState<boolean | null>(null);
   useEffect(() => {
@@ -1668,7 +1684,7 @@ export function App() {
           {/* a sidebar that cannot be drawn leaves the panes working */}
           <RenderBoundary resetKey={null} fallback={(retry) => <RegionCrash message={t("The sidebar can't be shown.")} retry={retry} />}>
             <CrashProbe region="sidebar" />
-            <MachineSidebar machines={visibleMachines} onOpenDesktop={openDesktop} onOpenFiles={openInstanceFiles} onNewInstance={() => setNewInstanceOpen(true)} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
+            <MachineSidebar machines={visibleMachines} onOpenDesktop={openDesktop} onOpenFiles={openInstanceFiles} onNewInstance={() => setNewInstanceOpen(true)} appInstanceIds={appInstanceIds} onInstancesChanged={refreshAppInstances} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
           </RenderBoundary>
           <SidebarResizer width={sidebarWidth} onResize={setSidebarWidth} />
         </aside>
@@ -1682,7 +1698,7 @@ export function App() {
         <div className={`pane-column${chatShown ? " is-chat" : ""}`}>
         {/* over the pane only: a bar across the window would cut the sidebar off from its top row in the header */}
         {newInstanceOpen && controlConsole && (
-          <NewInstanceDialog onDone={() => setNewInstanceOpen(false)} onClose={() => setNewInstanceOpen(false)} />
+          <NewInstanceDialog onDone={() => { setNewInstanceOpen(false); refreshAppInstances(); }} onClose={() => setNewInstanceOpen(false)} />
         )}
         {controlConsole && visibleMachines.length === 0 && (
           <div className="tree-state" role="status" style={{ padding: "1.5rem", textAlign: "center" }}>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Download, FolderOpen, Monitor, Plus, Settings, SlidersHorizontal, Undo2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, FolderOpen, LogOut, Monitor, Plus, Settings, SlidersHorizontal, Undo2, X } from "lucide-react";
 import type { Machine, MachineState, MachineUpdate } from "../../shared/machines.ts";
 import { MachineContext } from "../lib/machineContext.tsx";
 import { answerMachineSetup, machineRequest } from "../lib/api.ts";
@@ -34,6 +34,10 @@ interface Props { machines: Machine[]; selectedMachineId: string; selectedPaneId
   onOpenFiles?: (machineName: string, publicId: string) => void
   /** [v3 F3] 新建实例对话框(总控台内建) */
   onNewInstance?: () => void
+  /** [v3 F5] app 型实例公 id 集(桌面钮隐藏:app 无桌面) */
+  appInstanceIds?: ReadonlySet<string>
+  /** [v3 F5] 实例集变化回调(建/停/唤/销后刷 kind 集) */
+  onInstancesChanged?: () => void
 }
 export function MachineSidebar(props: Props) {
   const t = useT();
@@ -55,6 +59,14 @@ export function MachineSidebar(props: Props) {
         <button className="sidebar-row-action machine-new" style={{ marginLeft: "auto" }} aria-label={t("New instance")} title={t("New instance")}
           onClick={() => props.onNewInstance?.()}>
           <Plus aria-hidden="true" />
+        </button>
+        {/* [v3 F4 收尾] 登出:会话除册+cookie 清,整页回根即登录门 */}
+        <button className="sidebar-row-action machine-manage" aria-label={t("Log out")} title={t("Log out")}
+          onClick={() => { void (async () => {
+            try { await fetch(`${window.location.origin}/api/v1/auth/logout`, { method: "POST", credentials: "include" }); } catch { /* 网关不可达也强走重载 */ }
+            window.location.href = "/";
+          })(); }}>
+          <LogOut aria-hidden="true" />
         </button>
       </div>
     )}
@@ -132,8 +144,10 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
         <span className={`machine-dot is-${machine.action_required === "setup" ? "setup" : machine.state}`} title={machine.action_required === "setup" ? t("Setup needed") : t(STATE_WORD[machine.state])} aria-hidden="true" />
       </div>
       {/* [v3 F1] 实例桌面入口(socket 型机器行;grok 研究三:.machine-manage
-           只在 ssh 出现,socket 分支在此补;网关绝对 / 道,不走 machineRequest) */}
-      {machine.kind === "socket" && props.onOpenDesktop && online && (
+           只在 ssh 出现,socket 分支在此补;网关绝对 / 道,不走 machineRequest)。
+           [v3 F5] app 型隐藏(app 无桌面) */}
+      {machine.kind === "socket" && props.onOpenDesktop && online
+        && !props.appInstanceIds?.has(machine.name.replace(/^instance-/, "")) && (
         <button className="sidebar-row-action machine-manage" aria-label={`${t("Desktop")} · ${machine.name}`} title={t("Desktop")} onClick={() => props.onOpenDesktop!(machine.name, machine.name.replace(/^instance-/, ""))}>
           <Monitor aria-hidden="true" />
         </button>
@@ -143,9 +157,10 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
           <FolderOpen aria-hidden="true" />
         </button>
       )}
-      {/* [v3 F3] 生命周期:暂停/唤醒/销毁(网关 REST;socket 型行) */}
+      {/* [v3 F3] 生命周期:暂停/唤醒/销毁(网关 REST;socket 型行;
+           [v3 F5] 动毕刷实例集(kind 面跟变)) */}
       {machine.kind === "socket" && (
-        <InstanceLifecycleActions publicId={machine.name.replace(/^instance-/, "")} connected={online} onActed={() => {}} />
+        <InstanceLifecycleActions publicId={machine.name.replace(/^instance-/, "")} connected={online} onActed={() => { props.onInstancesChanged?.(); }} />
       )}
       {machine.kind === "ssh" && <button className="sidebar-row-action machine-manage" aria-label={t("Manage {name}", { name: machine.name })} title={t("Manage PC")} aria-expanded={editing} onClick={() => { setEditing(!editing); setConfirmDelete(false); }}><SlidersHorizontal aria-hidden="true" /></button>}
       {/* the fold over this PC's workspaces sits beside the + */}

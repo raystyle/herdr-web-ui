@@ -1,13 +1,13 @@
-// [v3 F3] 实例生命周期对话框+行操作(总控台内建实例管理):
-// 新建(名+类型位 system|app+首启 agent 多选 pi/claude/codex)、暂停/
-// 唤醒/销毁(经网关 REST,cookie)。
+// [v3 F5] 实例生命周期对话框+行操作(总控台内建实例管理):
+// 新建(名+类型 system|app 双现役+首启 agent 多选 pi/claude/codex)、
+// 暂停/唤醒/销毁(经网关 REST,cookie)。
 import { useState } from "react";
 import { Bot, Monitor, Pause, Play, Plus, Trash2 } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
 import { createInstance, type AgentKind, type InstanceKind } from "../lib/instanceLifecycle.ts";
 
-/** 新建实例对话框(类型位:system 现役|app F5 役占位禁用;首启 agent
- * 多选:缺省 pi,可多选,全不勾=不编排——on-ready 钩子经 socket 道补建)。 */
+/** 新建实例对话框(F5:类型 system|app 双现役;首启 agent 多选:缺省 pi,
+ * 可多选,全不勾=不编排——on-ready 钩子经 socket 道补建,两型同律)。 */
 export function NewInstanceDialog({ onDone, onClose }: { onDone: (id: string) => void; onClose: () => void }) {
   const t = useT();
   const [name, setName] = useState("");
@@ -46,8 +46,8 @@ export function NewInstanceDialog({ onDone, onClose }: { onDone: (id: string) =>
             <Monitor aria-hidden="true" />{t("System container")}
             <span style={{ color: "var(--text-dim)" }}>· {t("desktop, files, terminal")}</span>
           </label>
-          <label style={{ display: "flex", gap: "0.4rem", alignItems: "center", opacity: 0.55 }} title={t("Coming in F5")}>
-            <input type="radio" name="hx-kind" disabled />
+          <label style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+            <input type="radio" name="hx-kind" checked={kind === "app"} onChange={() => setKind("app")} />
             <Plus aria-hidden="true" />{t("App container")}
             <span style={{ color: "var(--text-dim)" }}>· {t("agent-only, no desktop")}</span>
           </label>
