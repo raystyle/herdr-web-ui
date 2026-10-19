@@ -1,3 +1,4 @@
+import { ensureSocketBridge, killSocketBridge } from "./socket-machines.ts";
 import { authenticatedWebSocket } from "./remote-websocket.ts";
 import { randomUUID } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
@@ -18,7 +19,7 @@ import { validateTarget } from "./machine-security.ts";
 import { detectHost, HERDR_INSTALL_CMD } from "./remote-host.ts";
 import { SshConnection } from "./ssh.ts";
 
-interface StoredMachine { id: string; name: string; target: SshTarget; enabled: boolean; snapshot?: SessionSnapshot | null }
+interface StoredMachine { id: string; name: string; target?: SshTarget; socketPath?: string; enabled: boolean; snapshot?: SessionSnapshot | null }
 interface Runtime {
   machine: Machine;
   ssh?: SshConnection;
@@ -181,7 +182,10 @@ export class MachineManager {
       if (!Array.isArray(saved)) throw new Error("Invalid machines.json; registrations were preserved");
       for (const item of saved as StoredMachine[]) {
         if (!/^[a-f0-9-]{36}$/.test(item.id) || typeof item.name !== "string" || typeof item.enabled !== "boolean") throw new Error("Invalid machine registration");
-        const machine: Machine = { id: item.id, name: item.name, kind: "ssh", enabled: item.enabled, target: validateTarget(item.target), state: "disconnected", snapshot: item.snapshot ?? null, error: null };
+        // [v3] socket 行:kind=socket,socketPath 必在;ssh 行照旧全验
+        const machine: Machine = item.socketPath
+          ? { id: item.id, name: item.name, kind: "socket", socketPath: item.socketPath, enabled: item.enabled, state: "disconnected", snapshot: item.snapshot ?? null, error: null }
+          : { id: item.id, name: item.name, kind: "ssh", enabled: item.enabled, target: validateTarget(item.target!), state: "disconnected", snapshot: item.snapshot ?? null, error: null };
         const runtime = this.runtime(machine);
         this.machines.set(item.id, runtime);
         if (item.enabled) queueMicrotask(() => void this.reconnect(runtime));
@@ -362,7 +366,9 @@ export class MachineManager {
   }
   private persist(): void {
     mkdirSync(this.stateDir, { recursive: true, mode: 0o700 });
-    const data: StoredMachine[] = [...this.machines.values()].filter(({ machine }) => !machine.herdr_profile_id).map(({ machine: m }) => ({ id: m.id, name: m.name, target: m.target!, enabled: m.enabled, snapshot: m.snapshot }));
+    const data: StoredMachine[] = [...this.machines.values()].filter(({ machine }) => !machine.herdr_profile_id).map(({ machine: m }) => m.kind === "socket"
+      ? { id: m.id, name: m.name, socketPath: m.socketPath!, enabled: m.enabled, snapshot: m.snapshot }
+      : { id: m.id, name: m.name, target: m.target!, enabled: m.enabled, snapshot: m.snapshot });
     const tmp = this.statePath + ".tmp";
     writeFileSync(tmp, JSON.stringify(data), { mode: 0o600 });
     chmodSync(tmp, 0o600); renameSync(tmp, this.statePath);
@@ -761,9 +767,9 @@ export class MachineManager {
       this.emit({ type: "machine-message", machine_id: runtime.machine.id, message });
       if (["pane-status", "pane-exited", "session-changed"].includes(message.type)) void this.refresh(runtime).catch((e) => this.lost(runtime, generation, e));
     };
-    ws.onclose = () => this.lost(runtime, generation, new Error("SSH bridge connection interrupted"));
+    ws.onclose = () => this.lost(runtime, generation, new Error(runtime.machine.kind === "socket" ? "socket bridge connection interrupted" : "SSH bridge connection interrupted"));
     ws.onerror = () => ws.close();
-    runtime.ssh!.onExit = () => this.lost(runtime, generation, new Error("SSH connection ended"));
+    if (runtime.ssh) runtime.ssh.onExit = () => this.lost(runtime, generation, new Error("SSH connection ended"));
     runtime.poll = setInterval(() => void this.refresh(runtime).catch((e) => this.lost(runtime, generation, e)), 5000);
     runtime.poll.unref();
   }
@@ -793,6 +799,16 @@ export class MachineManager {
     this.disconnect(runtime);
     runtime.machine.state = "reconnecting"; runtime.machine.action_required = null; this.emit();
     const generation = runtime.generation;
+    // [v3] socket 型:本地桥 spawn/复用→直连 observe;零 SSH 零 prepare
+    if (runtime.machine.kind === "socket") {
+      try {
+        const bridge = await ensureSocketBridge(runtime.machine.socketPath!);
+        if (generation !== runtime.generation || this.stopped) return;
+        runtime.endpoint = { url: bridge.url, token: bridge.token };
+        await this.observe(runtime); this.emit();
+      } catch (e) { this.lost(runtime, generation, e); }
+      return;
+    }
     runtime.ssh = new SshConnection(runtime.machine.target!, this.sshDir, join(this.sshDir, runtime.machine.id));
     try {
       await runtime.ssh.start(); await this.prepare(runtime);
@@ -839,7 +855,35 @@ export class MachineManager {
     }
     this.persist(); this.emit();
   }
+  /** [v3] socket 型 machine 写面(编排器调用;幂等按 name:同名改 socketPath 复用行,UUID 不变)。 */
+  upsertSocket(name: string, socketPath: string): Machine {
+    for (const runtime of this.machines.values()) {
+      if (runtime.machine.kind === "socket" && runtime.machine.name === name) {
+        if (runtime.machine.socketPath !== socketPath) {
+          runtime.machine.socketPath = socketPath;
+          this.disconnect(runtime);
+          this.saveSoon();
+          queueMicrotask(() => void this.reconnect(runtime));
+        } else if (runtime.machine.enabled && runtime.machine.state === "disconnected") {
+          queueMicrotask(() => void this.reconnect(runtime));
+        }
+        this.emit();
+        return runtime.machine;
+      }
+    }
+    const machine: Machine = { id: crypto.randomUUID(), name, kind: "socket", socketPath, enabled: true, state: "disconnected", snapshot: null, error: null };
+    const runtime = this.runtime(machine);
+    this.machines.set(machine.id, runtime);
+    this.saveSoon();
+    queueMicrotask(() => void this.reconnect(runtime));
+    this.emit();
+    return machine;
+  }
   remove(id: string): void {
+    // [v3] socket 行:删除时收掉本地桥进程(managed_remote 才杀)
+    const target = this.machines.get(id);
+    if (target?.machine.kind === "socket" && target.machine.socketPath) killSocketBridge(target.machine.socketPath);
+
     const runtime = this.machines.get(id);
     if (!runtime) throw new Error("PC not found");
     if (runtime.machine.herdr_profile_id) throw new Error("Remove this machine in herdr");

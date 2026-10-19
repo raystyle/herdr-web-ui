@@ -42,6 +42,14 @@ export async function handleMachineRequest(request: Request, manager: MachineMan
   const parts = url.pathname.slice("/api/machines".length).split("/").filter(Boolean);
   try {
     if (!parts.length && request.method === "GET") return jsonResponse({ machines: manager.list() });
+    // [v3] socket 型 machine 写面(编排器;幂等按 name;X-Herdr-Machine 已由外层链强制)
+    if (parts[0] === "socket" && parts.length === 1 && request.method === "POST") {
+      const body = await request.json() as { name?: unknown; socketPath?: unknown };
+      if (typeof body.name !== "string" || !body.name.trim() || body.name.length > 100 || !/^\/[A-Za-z0-9._/-]+$/.test(String(body.socketPath))) {
+        return fail("invalid_body", "Expected { name, socketPath } (absolute unix path)", 400);
+      }
+      return jsonResponse({ machine: manager.upsertSocket(body.name.trim(), String(body.socketPath)) });
+    }
     if (parts[0] === "events" && parts.length === 1 && request.method === "GET") {
       let stop: (() => void) | undefined;
       let stopPreferences: (() => void) | undefined;

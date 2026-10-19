@@ -18,8 +18,10 @@ export interface Machine {
   herdr_profile_id?: string;
   id: string;
   name: string;
-  kind: "local" | "ssh";
+  kind: "local" | "ssh" | "socket";
   target?: SshTarget;
+  /** kind==="socket":代理到远机 herdr socket 的本地 unix socket 路径(编排器 incus unix↔unix device) */
+  socketPath?: string;
   enabled: boolean;
   state: MachineState;
   error: string | null;
@@ -103,3 +105,6 @@ export function paneStorageId(machineId: string, paneId: string): string {
 export function machinePath(machineId: string, path: string): string {
   return machineId === LOCAL_MACHINE ? `/api/${path}` : `/api/machines/${encodeURIComponent(machineId)}/${path}`;
 }
+
+/** [v3] socket 型 machine 注册请求(编排器写面;幂等按 name) */
+export interface SocketMachineRequest { name: string; socketPath: string }
