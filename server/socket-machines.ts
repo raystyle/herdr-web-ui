@@ -44,8 +44,9 @@ export async function ensureSocketBridge(socketPath: string, timeoutMs = 60_000)
   if (existing && alive(existing.pid)) {
     return { url: `http://127.0.0.1:${existing.port}`, token: existing.token, pid: existing.pid };
   }
+  // process.execPath=本进程 bun 绝对路径(systemd 服的 PATH 可无 bun)
   const proc = Bun.spawn(
-    ["bun", "run", "server/remote-entry.ts"],
+    [process.execPath, "run", "server/remote-entry.ts"],
     {
       cwd: join(import.meta.dir, ".."),
       env: { ...process.env, HERDR_SOCKET: abs },
