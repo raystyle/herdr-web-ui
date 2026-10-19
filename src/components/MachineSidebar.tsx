@@ -43,7 +43,7 @@ export function MachineSidebar(props: Props) {
   return <SidebarActivityProvider value={activity}><div className="sidebar-shell">
     {/* [v3 F0] 总控台品牌位:皓玄 logo+名(根部署形维持上游无品牌头) */}
     {controlConsole && (
-      <div className="machine-header" style={{ alignItems: "center", gap: "0.5rem", paddingBottom: "0.25rem" }}>
+      <div className="machine-header brand-header" style={{ alignItems: "center", gap: "0.5rem", paddingBottom: "0.25rem", cursor: "default" }}>
         <HxLogo size={20} />
         <span className="machine-title" style={{ fontSize: "0.95rem" }}>{BRAND_NAME}</span>
       </div>
