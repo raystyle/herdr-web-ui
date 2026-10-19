@@ -224,7 +224,8 @@ function encodings(header: string | null | undefined): Array<"br" | "gzip" | "id
  * 保持总控形态——实例视图/品牌/暗色钉)。 */
 function consoleShellFlag(html: string): string {
   if (process.env["HERDR_WEB_CONSOLE"] !== "1") return html
-  return html.replace("<head>", `<head><script>window.__HX_CONSOLE__=1</script>`)
+  // meta 旗:CSP script-src 'self' 禁 inline script,meta 标签不在禁列
+  return html.replace("<head>", `<head><meta name="hx-console" content="1">`)
 }
 
 export async function serveStatic(pathname: string, acceptEncoding?: string | null, origin?: string): Promise<Response> {
