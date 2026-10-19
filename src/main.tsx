@@ -52,12 +52,14 @@ window.addEventListener("unhandledrejection", (event) => console.error("herdr-we
 // fork 启动副作用(fetch 补丁已装,探测自走网关面)。
 async function boot() {
   const consoleForm = document.querySelector('meta[name="hx-console"]')?.getAttribute("content") === "1";
+  if (container === null) throw new Error("#root is missing from index.html");
+  const root = container;
   let gated = false;
   if (consoleForm) {
     const { LoginGate, probeSession } = await import("./components/LoginGate.tsx");
     gated = !(await probeSession());
     if (gated) {
-      createRoot(container).render(
+      createRoot(root).render(
         <StrictMode>
           <LoginGate onAuthed={() => { window.location.href = "/" }} />
         </StrictMode>,
@@ -65,7 +67,7 @@ async function boot() {
       return;
     }
   }
-  createRoot(container).render(
+  createRoot(root).render(
     <StrictMode>
       <RenderBoundary resetKey={null} fallback={(_retry, error) => <AppCrash error={error} />}>
         <CrashProbe region="root" />
