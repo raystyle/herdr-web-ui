@@ -27,6 +27,7 @@ export const basePath = window.location.pathname.replace(/\/[^/]*$/, "");
   }) as typeof window.fetch;
 }
 
+import { LoginGate, probeSession } from "./components/LoginGate.tsx";
 // a phone's sheets drop back down however they close (lib/sheets.ts)
 watchSheetExits();
 
@@ -51,12 +52,13 @@ window.addEventListener("unhandledrejection", (event) => console.error("herdr-we
 // hx_sess)后 __entry 302 整页重载,此处放行全应用。根级拦截先于一切
 // fork 启动副作用(fetch 补丁已装,探测自走网关面)。
 async function boot() {
+  const LoginGateModule = { LoginGate, probeSession };
   const consoleForm = document.querySelector('meta[name="hx-console"]')?.getAttribute("content") === "1";
   if (container === null) throw new Error("#root is missing from index.html");
   const root = container;
   let gated = false;
   if (consoleForm) {
-    const { LoginGate, probeSession } = await import("./components/LoginGate.tsx");
+    const { LoginGate, probeSession } = LoginGateModule;
     gated = !(await probeSession());
     if (gated) {
       createRoot(root).render(
