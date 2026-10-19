@@ -38,6 +38,7 @@ import { LOCAL_MACHINE, paneStorageId, type Machine, type MachineEvent } from ".
 import { controlConsole, instanceMachine } from "./lib/controlMode.ts";
 import { DesktopPanel } from "./components/DesktopPanel.tsx";
 import { InstanceFilesPanel } from "./components/InstanceFilesPanel.tsx";
+import { NewInstanceDialog } from "./components/InstanceDialogs.tsx";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
 import { applyPaneStatus } from "./lib/snapshot.ts";
 import { setAgentRowTokens } from "./lib/agentRowTokens.ts";
@@ -459,6 +460,8 @@ export function App() {
     setFilesDock(null);
     setDesktopDock({ machineName, publicId });
   }, []);
+  // [v3 F3] 新建实例对话框(总控台内建;建后等 provision 完成进机器列表)
+  const [newInstanceOpen, setNewInstanceOpen] = useState(false);
   // [v3 F2] 实例文件 dock(与桌面 dock 同槽互斥)
   const [filesDock, setFilesDock] = useState<{ machineName: string; publicId: string } | null>(null);
   const openInstanceFiles = useCallback((machineName: string, publicId: string) => {
@@ -1657,7 +1660,7 @@ export function App() {
           {/* a sidebar that cannot be drawn leaves the panes working */}
           <RenderBoundary resetKey={null} fallback={(retry) => <RegionCrash message={t("The sidebar can't be shown.")} retry={retry} />}>
             <CrashProbe region="sidebar" />
-            <MachineSidebar machines={visibleMachines} onOpenDesktop={openDesktop} onOpenFiles={openInstanceFiles} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
+            <MachineSidebar machines={visibleMachines} onOpenDesktop={openDesktop} onOpenFiles={openInstanceFiles} onNewInstance={() => setNewInstanceOpen(true)} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
           </RenderBoundary>
           <SidebarResizer width={sidebarWidth} onResize={setSidebarWidth} />
         </aside>
@@ -1670,10 +1673,13 @@ export function App() {
         <WebPanelContext.Provider value={filePanelAvailable ? openWebPage : null}>
         <div className={`pane-column${chatShown ? " is-chat" : ""}`}>
         {/* over the pane only: a bar across the window would cut the sidebar off from its top row in the header */}
+        {newInstanceOpen && controlConsole && (
+          <NewInstanceDialog onDone={() => setNewInstanceOpen(false)} onClose={() => setNewInstanceOpen(false)} />
+        )}
         {controlConsole && visibleMachines.length === 0 && (
           <div className="tree-state" role="status" style={{ padding: "1.5rem", textAlign: "center" }}>
             <p>{t("No instances yet")}</p>
-            <button className="btn" onClick={() => { window.location.href = "/" }}>{t("Create one in the console")}</button>
+            <button className="btn" onClick={() => setNewInstanceOpen(true)}>{t("Create")}</button>
           </div>
         )}
         <UpdateNotice updates={updates} onOpen={() => { setSettingsSection("updates"); setSettingsOpen(true); }} />

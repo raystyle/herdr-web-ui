@@ -22,8 +22,6 @@ import { SshConnection } from "./ssh.ts";
 interface StoredMachine { id: string; name: string; target?: SshTarget; socketPath?: string; enabled: boolean; snapshot?: SessionSnapshot | null }
 interface Runtime {
   machine: Machine;
-  /** [v3] 观察流最近消息时刻(空闲回收信号) */
-  lastActivityAt: number | null;
   ssh?: SshConnection;
   endpoint?: { url: string; token: string };
   observer?: WebSocket;
@@ -299,8 +297,8 @@ export class MachineManager {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
   }
-  private runtime(machine: Machine): Runtime { return { machine, attempts: 0, generation: 0, refreshing: false, refreshQueued: false, snapshotRevision: 0, terminals: new Set(), lastActivityAt: machine.lastActivityAt ?? null }; }
-  list(): Machine[] { return [this.local, ...[...this.machines.values()].map((r) => ({ ...r.machine, lastActivityAt: r.lastActivityAt }))]; }
+  private runtime(machine: Machine): Runtime { machine.lastActivityAt ??= null; return { machine, attempts: 0, generation: 0, refreshing: false, refreshQueued: false, snapshotRevision: 0, terminals: new Set() }; }
+  list(): Machine[] { return [this.local, ...[...this.machines.values()].map((r) => r.machine)]; }
   subscribe(listener: (event: MachineEvent) => void): () => void {
     this.listeners.add(listener);
     listener({ type: "machines", machines: this.list() });
@@ -756,7 +754,7 @@ export class MachineManager {
     ws.onopen = () => ws.send(JSON.stringify({ type: "role", mode: "observe" }));
     ws.onmessage = (event) => {
       if (generation !== runtime.generation || this.stopped) return;
-      runtime.lastActivityAt = Date.now();
+      runtime.machine.lastActivityAt = Date.now();
       let message: ServerMessage;
       try { message = JSON.parse(String(event.data)); } catch { return; }
       // session-changed queues one follow-up, but lets the active roster publish.

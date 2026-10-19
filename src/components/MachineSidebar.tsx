@@ -9,6 +9,7 @@ import type { AppActions } from "../lib/actions.ts";
 import { useInstallPrompt } from "../lib/install.ts";
 import { Sidebar } from "./Sidebar.tsx";
 import { HxLogo } from "./HxLogo.tsx";
+import { InstanceLifecycleActions } from "./InstanceDialogs.tsx";
 import { BRAND_NAME, controlConsole } from "../lib/controlMode.ts";
 import { AgentSidebar } from "./AgentSidebar.tsx";
 import { SidebarActivityProvider, useSidebarActivityState } from "../lib/sidebarActivity.tsx";
@@ -31,6 +32,8 @@ interface Props { machines: Machine[]; selectedMachineId: string; selectedPaneId
   onOpenDesktop?: (machineName: string, publicId: string) => void
   /** [v3 F2] 打开实例文件 dock(socket 型机器行) */
   onOpenFiles?: (machineName: string, publicId: string) => void
+  /** [v3 F3] 新建实例对话框(总控台内建) */
+  onNewInstance?: () => void
 }
 export function MachineSidebar(props: Props) {
   const t = useT();
@@ -48,6 +51,11 @@ export function MachineSidebar(props: Props) {
       <div className="machine-header brand-header" style={{ alignItems: "center", gap: "0.5rem", paddingBottom: "0.25rem", cursor: "default" }}>
         <HxLogo size={20} />
         <span className="machine-title" style={{ fontSize: "0.95rem" }}>{BRAND_NAME}</span>
+        {/* [v3 F3] 新建实例入口(类型位选型) */}
+        <button className="sidebar-row-action machine-new" style={{ marginLeft: "auto" }} aria-label={t("New instance")} title={t("New instance")}
+          onClick={() => props.onNewInstance?.()}>
+          <Plus aria-hidden="true" />
+        </button>
       </div>
     )}
     <div className="machine-list" aria-label={t("PCs and workspaces")}>
@@ -134,6 +142,10 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
         <button className="sidebar-row-action machine-manage" aria-label={`${t("Files")} · ${machine.name}`} title={t("Files")} onClick={() => props.onOpenFiles!(machine.name, machine.name.replace(/^instance-/, ""))}>
           <FolderOpen aria-hidden="true" />
         </button>
+      )}
+      {/* [v3 F3] 生命周期:暂停/唤醒/销毁(网关 REST;socket 型行) */}
+      {machine.kind === "socket" && (
+        <InstanceLifecycleActions publicId={machine.name.replace(/^instance-/, "")} connected={online} onActed={() => {}} />
       )}
       {machine.kind === "ssh" && <button className="sidebar-row-action machine-manage" aria-label={t("Manage {name}", { name: machine.name })} title={t("Manage PC")} aria-expanded={editing} onClick={() => { setEditing(!editing); setConfirmDelete(false); }}><SlidersHorizontal aria-hidden="true" /></button>}
       {/* the fold over this PC's workspaces sits beside the + */}

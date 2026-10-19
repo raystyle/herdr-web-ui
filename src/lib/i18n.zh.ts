@@ -108,7 +108,6 @@ export const ZH: Record<string, string> = {
   // ---- settings ----
   "Back to console": "返回控制台",
   "No instances yet": "还没有实例",
-  "Create one in the console": "去控制台新建",
   "Settings": "设置",
   "Close settings": "关闭设置",
   "Appearance": "外观",
@@ -1377,4 +1376,14 @@ export const ZH: Record<string, string> = {
   "Desktop password is unavailable": "桌面口令不可用",
   "The desktop connection ended": "桌面连接已断开",
   "Fullscreen": "全屏",
+  "New instance": "新建实例",
+  "Instance type": "实例类型",
+  "System container": "系统容器",
+  "desktop, files, terminal": "桌面 · 文件 · 终端",
+  "App container": "应用容器",
+  "agent-only, no desktop": "仅 agent,无桌面",
+  "Coming in F5": "F5 役提供",
+  "Pause": "暂停",
+  "Destroy": "销毁",
+  "Create": "创建",
 };
