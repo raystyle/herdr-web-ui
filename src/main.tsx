@@ -46,13 +46,34 @@ window.addEventListener("unhandledrejection", (event) => console.error("herdr-we
 // A render error the parts below do not catch would unmount the whole tree and leave the page
 // blank, and an installed web app has no reload button: AppCrash offers one. It sits outside
 // SettingsProvider, which may be what threw.
-createRoot(container).render(
-  <StrictMode>
-    <RenderBoundary resetKey={null} fallback={(_retry, error) => <AppCrash error={error} />}>
-      <CrashProbe region="root" />
-      <SettingsProvider>
-        {reader !== null ? <FileReader target={reader} /> : <App />}
-      </SettingsProvider>
-    </RenderBoundary>
-  </StrictMode>,
-);
+// [v3 单页坍缩] 根级登录门:总控形(meta 旗)且未持网关会话时,整树
+// 只渲染 LoginGate——fork 自身配对门/应用全在其下,登录(票桥铸
+// hx_sess)后 __entry 302 整页重载,此处放行全应用。根级拦截先于一切
+// fork 启动副作用(fetch 补丁已装,探测自走网关面)。
+async function boot() {
+  const consoleForm = document.querySelector('meta[name="hx-console"]')?.getAttribute("content") === "1";
+  let gated = false;
+  if (consoleForm) {
+    const { LoginGate, probeSession } = await import("./components/LoginGate.tsx");
+    gated = !(await probeSession());
+    if (gated) {
+      createRoot(container).render(
+        <StrictMode>
+          <LoginGate onAuthed={() => { window.location.href = "/" }} />
+        </StrictMode>,
+      );
+      return;
+    }
+  }
+  createRoot(container).render(
+    <StrictMode>
+      <RenderBoundary resetKey={null} fallback={(_retry, error) => <AppCrash error={error} />}>
+        <CrashProbe region="root" />
+        <SettingsProvider>
+          {reader !== null ? <FileReader target={reader} /> : <App />}
+        </SettingsProvider>
+      </RenderBoundary>
+    </StrictMode>,
+  );
+}
+void boot();
