@@ -1,7 +1,7 @@
 // [v3 F2] 实例文件面板:右侧 dock(DesktopPanel 同位同 chrome)。单层
 // 目录列表+面包屑导航+文本预览(白名单经网关校验);herdr 暗色皮,
 // file-panel 系 CSS 复用。编辑抽屉与上传列升级批。
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FileText, Folder, FolderOpen, RotateCw, X } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
 import { listInstanceDir, readInstanceText, type InstanceFileEntry } from "../lib/instanceFiles.ts";
@@ -11,6 +11,7 @@ export interface InstanceFilesPanelProps {
   machineName: string
   publicId: string
   onClose: () => void
+  panelStart?: ReactNode
 }
 
 function fmtSize(n: number): string {
@@ -19,7 +20,7 @@ function fmtSize(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
 
-export function InstanceFilesPanel({ machineName, publicId, onClose }: InstanceFilesPanelProps) {
+export function InstanceFilesPanel({ machineName, publicId, onClose, panelStart }: InstanceFilesPanelProps) {
   const t = useT();
   const [dir, setDir] = useState<string>("");
   const [root, setRoot] = useState<string>("");
@@ -59,6 +60,7 @@ export function InstanceFilesPanel({ machineName, publicId, onClose }: InstanceF
 
   return (
     <aside className="file-panel web-panel" aria-label={`${machineName} · ${t("Files")}`}>
+      {panelStart}
       <section className="file-viewer file-viewer-docked">
         <header className="file-viewer-header file-viewer-header-docked">
           <FolderOpen aria-hidden="true" className="file-viewer-glyph" />

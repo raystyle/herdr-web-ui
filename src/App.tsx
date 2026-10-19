@@ -1833,9 +1833,9 @@ export function App() {
         {webPage !== null && filePanelAvailable && !(viewing !== null && fileDocked) && desktopDock === null &&
           <WebPanel key={webPage} url={webPage} onClose={() => setWebPage(null)} panelStart={<FilePanelResizer width={filePanelWidth} onResize={setFilePanelWidth} />} />}
         {desktopDock !== null && filePanelAvailable && fileDocked === false &&
-          <DesktopPanel key={desktopDock.publicId} machineName={desktopDock.machineName} publicId={desktopDock.publicId} onClose={() => setDesktopDock(null)} />}
+          <DesktopPanel key={desktopDock.publicId} machineName={desktopDock.machineName} publicId={desktopDock.publicId} onClose={() => setDesktopDock(null)} panelStart={<FilePanelResizer width={filePanelWidth} onResize={setFilePanelWidth} />} />}
         {filesDock !== null && filePanelAvailable && fileDocked === false && desktopDock === null &&
-          <InstanceFilesPanel key={filesDock.publicId} machineName={filesDock.machineName} publicId={filesDock.publicId} onClose={() => setFilesDock(null)} />}
+          <InstanceFilesPanel key={filesDock.publicId} machineName={filesDock.machineName} publicId={filesDock.publicId} onClose={() => setFilesDock(null)} panelStart={<FilePanelResizer width={filePanelWidth} onResize={setFilePanelWidth} />} />}
       </div>
 
       <MachineContext.Provider value={newSessionMachineId}><NewSessionDialog
