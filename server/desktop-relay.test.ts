@@ -33,7 +33,14 @@ describe("DesktopRelay watch role (F-3)", () => {
     relay.bind({ send: () => {}, close: () => {} } as unknown as Parameters<DesktopRelay["bind"]>[0]);
     return relay;
   };
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
+  // AGENTS.md: bounded polls with deadlines, never fixed sleeps
+  const until = async (ok: () => boolean): Promise<void> => {
+    const deadline = Date.now() + 5_000;
+    while (!ok()) {
+      if (Date.now() > deadline) throw new Error("upstream frames not received within 5s");
+      await Bun.sleep(25);
+    }
+  };
 
   test("watch drops key, pointer and cut-text, keeps the rendering messages", async () => {
     const relay = await relayOf(true);
@@ -43,7 +50,7 @@ describe("DesktopRelay watch role (F-3)", () => {
     relay.message(Buffer.from([2, 0, 0, 0, 0])); // SetEncodings
     relay.message(Buffer.from([3, 1, 0, 0, 0, 10, 10])); // FramebufferUpdateRequest
     relay.message(Buffer.from([0, 0])); // SetPixelFormat
-    await settle();
+    await until(() => received.length >= 3);
     expect(received).toEqual([2, 3, 0]);
     relay.close();
   });
@@ -52,7 +59,7 @@ describe("DesktopRelay watch role (F-3)", () => {
     const relay = await relayOf(false);
     relay.message(Buffer.from([4, 1, 0, 0, 0, 65, 1])); // KeyEvent
     relay.message(Buffer.from([5, 1, 10, 10, 0, 0])); // PointerEvent
-    await settle();
+    await until(() => received.length >= 2);
     expect(received).toEqual([4, 5]);
     relay.close();
   });
