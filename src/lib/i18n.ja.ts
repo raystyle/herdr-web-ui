@@ -1367,4 +1367,12 @@ export const JA: Record<string, string> = {
   "Conversation turns": "会話のターン",
   "Go to turn {n}": "ターン {n} へ移動",
   "Show full message": "メッセージ全体を表示",
+  "Back to console": "コンソールに戻る",
+  "No instances yet": "インスタンスがまだありません",
+  "Create one in the console": "コンソールで新規作成",
+  "Desktop": "デスクトップ",
+  "Desktop password is unavailable": "デスクトップのパスワードを取得できません",
+  "The desktop connection ended": "デスクトップ接続が終了しました",
+  "Fullscreen": "全画面表示",
+  "皓玄": "皓玄",
 };

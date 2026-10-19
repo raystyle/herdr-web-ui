@@ -8,6 +8,8 @@ import { keepDismissed, noticeKey, readDismissed, waitingMachines, writeDismisse
 import type { AppActions } from "../lib/actions.ts";
 import { useInstallPrompt } from "../lib/install.ts";
 import { Sidebar } from "./Sidebar.tsx";
+import { HxLogo } from "./HxLogo.tsx";
+import { BRAND_NAME, controlConsole } from "../lib/controlMode.ts";
 import { AgentSidebar } from "./AgentSidebar.tsx";
 import { SidebarActivityProvider, useSidebarActivityState } from "../lib/sidebarActivity.tsx";
 import { UsageMeters } from "./UsageMeters.tsx";
@@ -25,7 +27,9 @@ export const STATE_WORD: Readonly<Record<MachineState, string>> = {
   error: "Connection error",
 };
 
-interface Props { machines: Machine[]; selectedMachineId: string; selectedPaneId: string | null; actions: AppActions; onSelect(machineId: string, paneId: string | null): void; onNew(machineId: string): void; onSetup(machine: Machine, update?: boolean): void }
+interface Props { machines: Machine[]; selectedMachineId: string; selectedPaneId: string | null; actions: AppActions; onSelect(machineId: string, paneId: string | null): void; onNew(machineId: string): void; onSetup(machine: Machine, update?: boolean): void   /** [v3 F1] 打开实例桌面 dock(socket 型机器行) */
+  onOpenDesktop?: (machineName: string, publicId: string) => void
+}
 export function MachineSidebar(props: Props) {
   const t = useT();
   const { canInstall, installed, install, help } = useInstallPrompt();
@@ -37,6 +41,13 @@ export function MachineSidebar(props: Props) {
   const loadingWords = useAnnouncedText(props.machines.length === 0 ? t("Loading PCs…") : null);
   // no top bar: a workspace starts from its PC's header, and Add PC lives in Settings → Remote PCs
   return <SidebarActivityProvider value={activity}><div className="sidebar-shell">
+    {/* [v3 F0] 总控台品牌位:皓玄 logo+名(根部署形维持上游无品牌头) */}
+    {controlConsole && (
+      <div className="machine-header" style={{ alignItems: "center", gap: "0.5rem", paddingBottom: "0.25rem" }}>
+        <HxLogo size={20} />
+        <span className="machine-title" style={{ fontSize: "0.95rem" }}>{BRAND_NAME}</span>
+      </div>
+    )}
     <div className="machine-list" aria-label={t("PCs and workspaces")}>
       {props.machines.map((machine) => <MachineGroup key={machine.id} {...props} machine={machine} />)}
       <p className={loadingWords === null ? "visually-hidden" : "tree-state"} role="status">{loadingWords}</p>
@@ -110,6 +121,13 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
         {machine.kind === "local" && <span className="machine-kind" title={t("The computer this app runs on")}>{t("Host")}</span>}
         <span className={`machine-dot is-${machine.action_required === "setup" ? "setup" : machine.state}`} title={machine.action_required === "setup" ? t("Setup needed") : t(STATE_WORD[machine.state])} aria-hidden="true" />
       </div>
+      {/* [v3 F1] 实例桌面入口(socket 型机器行;grok 研究三:.machine-manage
+           只在 ssh 出现,socket 分支在此补;网关绝对 / 道,不走 machineRequest) */}
+      {machine.kind === "socket" && props.onOpenDesktop && online && (
+        <button className="sidebar-row-action machine-manage" aria-label={`${t("Desktop")} · ${machine.name}`} title={t("Desktop")} onClick={() => props.onOpenDesktop!(machine.name, machine.name.replace(/^instance-/, ""))}>
+          <Monitor aria-hidden="true" />
+        </button>
+      )}
       {machine.kind === "ssh" && <button className="sidebar-row-action machine-manage" aria-label={t("Manage {name}", { name: machine.name })} title={t("Manage PC")} aria-expanded={editing} onClick={() => { setEditing(!editing); setConfirmDelete(false); }}><SlidersHorizontal aria-hidden="true" /></button>}
       {/* the fold over this PC's workspaces sits beside the + */}
       <button className="sidebar-row-action machine-toggle" aria-expanded={!collapsed} aria-label={collapsed ? t("Expand {name}", { name: machine.name }) : t("Collapse {name}", { name: machine.name })} title={collapsed ? t("Expand {name}", { name: machine.name }) : t("Collapse {name}", { name: machine.name })} onClick={toggle}>{collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}</button>

@@ -299,13 +299,20 @@ describe("telemetry settings snapshot", () => {
   });
 
   it("reports all supported ids on either side and rejects ids outside the schema", () => {
-    for (const id of THEME_IDS) {
+    // [v3 F0] haoxuan 为 codex 派生品牌 palette,telemetry 报派生源(见
+    // settings.ts telemetryPalette);不进 worker schema,单独断言映射
+    for (const id of THEME_IDS.filter((id) => id !== "haoxuan")) {
       for (const side of ["darkTheme", "lightTheme"] as const) {
         const snapshot = telemetrySettingsSnapshot(sanitizeSettings({ [side]: id }));
         expect(snapshot[side]).toBe(id);
         expect(telemetrySettings(snapshot)).toEqual(snapshot);
         expect(telemetrySettings({ ...snapshot, [side]: "not-a-theme" })).toBeNull();
       }
+    }
+    for (const side of ["darkTheme", "lightTheme"] as const) {
+      const snapshot = telemetrySettingsSnapshot(sanitizeSettings({ [side]: "haoxuan" }));
+      expect(snapshot[side]).toBe("codex");
+      expect(telemetrySettings(snapshot)).toEqual(snapshot);
     }
   });
 

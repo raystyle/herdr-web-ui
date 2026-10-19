@@ -245,6 +245,7 @@ const THEME_NAMES: Record<ThemeId, string> = {
   amber: "Amber",
   charcoal: "Charcoal",
   codex: "Codex",
+  haoxuan: "皓玄",
   catppuccin: "Catppuccin",
   "catppuccin-latte": "Catppuccin Latte",
   "tokyo-night": "Tokyo Night",

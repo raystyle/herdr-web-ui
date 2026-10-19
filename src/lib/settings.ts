@@ -5,6 +5,8 @@
  * `--term-*` tokens of each theme for PaneTerminal's theme object.
  */
 
+import type { TelemetryThemeId } from "../../shared/telemetry.ts";
+import { controlConsole } from "./controlMode.ts";
 import type { TelemetrySettings } from "../../shared/telemetry.ts";
 import { mirrorPalette, SHARED_SETTING_KEYS, type SharedSettingKey } from "../../shared/preferences.ts";
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -182,6 +184,12 @@ type TelemetrySourceSettings = Omit<Settings,
   | "quickReplies" | "usageOrder" | "usageHidden" | "fileOpen" | "webLinks" | "claudeLaunchMode" | "codexLaunchMode">;
 
 /** Compare structured custom settings by content against this app's built-in defaults. */
+
+/** [v3 F0] 品牌派生 palette 的 telemetry 报值:报派生源 codex(worker schema 不含 haoxuan) */
+function telemetryPalette(p: Palette): TelemetryThemeId {
+  return (p === "haoxuan" ? "codex" : p) as TelemetryThemeId
+}
+
 function differsFromDefault(value: unknown, defaultValue: unknown): boolean {
   return JSON.stringify(value) !== JSON.stringify(defaultValue);
 }
@@ -196,9 +204,11 @@ export function telemetrySettingsSnapshot(settings: Settings): TelemetrySettings
     agentOrder: settings.agentOrder,
     agentMarks: settings.agentMarks,
     statusIndicators: settings.statusIndicators,
-    palette: settings.palette,
-    paletteLight: settings.paletteLight,
-    paletteDark: settings.paletteDark,
+    // [v3 F0] haoxuan 为 codex 派生品牌 palette;telemetry worker schema
+    // 不含它,报其派生源 id(清单零改,免 worker 重部署)
+    palette: telemetryPalette(settings.palette),
+    paletteLight: telemetryPalette(settings.paletteLight),
+    paletteDark: telemetryPalette(settings.paletteDark),
     terminalFontSize: settings.terminalFontSize,
     terminalWheelSpeed: settings.terminalWheelSpeed,
     paneClipboard: settings.paneClipboard,
@@ -238,8 +248,8 @@ export function telemetrySettingsSnapshot(settings: Settings): TelemetrySettings
     quickReplyCount: settings.quickReplies.length,
     usageHiddenCount: settings.usageHidden.length,
     usageOrderCustom: settings.usageOrder.length > 0,
-    darkTheme: settings.darkTheme,
-    lightTheme: settings.lightTheme,
+    darkTheme: telemetryPalette(settings.darkTheme),
+    lightTheme: telemetryPalette(settings.lightTheme),
   };
 }
 
@@ -569,7 +579,9 @@ export function applyToDocument(settings: Settings, entry: ThemeEntry, language:
   root.lang = LOCALE_TAGS[language];
   root.dataset["theme"] = entry.mode;
   root.dataset["density"] = settings.density;
-  root.dataset["palette"] = entry.id;
+  // [v3 F0] 总控台部署形钉产品 palette(皓玄品牌色;用户 Appearance 选择
+  // 在该形态下让位——产品锁一色,grok 研究三中案)
+  root.dataset["palette"] = controlConsole ? "haoxuan" : entry.id;
   root.dataset["chatWidth"] = settings.chatWidth;
   // src/components/AgentMark.css keys the mono logos on it
   root.dataset["marks"] = settings.agentMarks;

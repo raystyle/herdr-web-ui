@@ -21,10 +21,9 @@ const session = process.env["HERDR_REMOTE_SESSION"];
 // Windows they live under XDG_CONFIG_HOME when set, then %APPDATA%\herdr (`herdr status server`)
 const herdrConfig = windows ? join(process.env["XDG_CONFIG_HOME"] || process.env["APPDATA"] || join(homedir(), "AppData", "Roaming"), "herdr") : join(process.env["XDG_CONFIG_HOME"] || join(homedir(), ".config"), "herdr");
 // [v3] socket-machine:外部预设的 HERDR_SOCKET(编排器 incus unix↔unix 代理
-// socket)优先——中央 web-ui 以此为每实例 spawn 本地桥
-if (!process.env["HERDR_SOCKET"] || session) {
-  process.env["HERDR_SOCKET"] = session ? join(herdrConfig, "sessions", session, "herdr.sock") : join(herdrConfig, "herdr.sock");
-}
+// socket)优先——中央 web-ui 以此为每实例 spawn 本地桥;单行赋值保
+// remote-entry.test 的源行扫描形
+process.env["HERDR_SOCKET"] = session ? join(herdrConfig, "sessions", session, "herdr.sock") : (process.env["HERDR_SOCKET"] || join(herdrConfig, "herdr.sock"));
 function staleWindowsMarker(path: string): boolean {
   return staleMarker(readFileSync(path, "utf8"), (pid) => {
     try {

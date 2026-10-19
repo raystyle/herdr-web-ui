@@ -1372,4 +1372,9 @@ export const ZH: Record<string, string> = {
   "Conversation turns": "对话轮次",
   "Go to turn {n}": "跳到第 {n} 轮",
   "Show full message": "显示完整消息",
+  "皓玄": "皓玄",
+  "Desktop": "桌面",
+  "Desktop password is unavailable": "桌面口令不可用",
+  "The desktop connection ended": "桌面连接已断开",
+  "Fullscreen": "全屏",
 };

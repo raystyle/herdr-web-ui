@@ -1365,4 +1365,12 @@ export const KO: Record<string, string> = {
   "Conversation turns": "대화 턴",
   "Go to turn {n}": "{n}번째 턴으로 이동",
   "Show full message": "전체 메시지 보기",
+  "Back to console": "콘솔로 돌아가기",
+  "No instances yet": "아직 인스턴스가 없습니다",
+  "Create one in the console": "콘솔에서 만들기",
+  "Desktop": "데스크톱",
+  "Desktop password is unavailable": "데스크톱 암호를 가져올 수 없습니다",
+  "The desktop connection ended": "데스크톱 연결이 종료되었습니다",
+  "Fullscreen": "전체 화면",
+  "皓玄": "皓玄",
 };
