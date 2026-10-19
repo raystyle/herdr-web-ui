@@ -106,6 +106,7 @@ export const ZH: Record<string, string> = {
   "Check the terminal before entering the secret again.": "重新输入前，请先检查终端状态。",
   "Sent directly to this terminal. Never saved as a draft or queued.": "直接发送到此终端，不会存为草稿或加入待发队列。",
   // ---- settings ----
+  "Back to console": "返回控制台",
   "Settings": "设置",
   "Close settings": "关闭设置",
   "Appearance": "外观",
