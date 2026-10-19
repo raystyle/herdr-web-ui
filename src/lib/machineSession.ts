@@ -29,7 +29,8 @@ export class MachineSession {
   private closed = false;
 
   constructor(readonly machineId: string, options: MachineSessionOptions = {}) {
-    this.socket = options.socket ?? new HerdrSocket(`${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws?machine_id=${encodeURIComponent(machineId)}`);
+    // [v3] 带部署基址前缀(网关 /control 代理形;根部署为空串)
+this.socket = options.socket ?? new HerdrSocket(`${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}${window.location.pathname.replace(/\/[^/]*$/, "")}/ws?machine_id=${encodeURIComponent(machineId)}`);
     this.store = options.pendingStore ?? pendingMessages;
     // Installed before view subscribers, and kept even while this PC has no mounted pane.
     this.offMessage = this.socket.on((message) => {
