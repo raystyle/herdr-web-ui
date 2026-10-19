@@ -76,6 +76,7 @@ import { bridgeIdentity, registerBridge } from "./bridge.ts";
 import { handleMachineRequest } from "./machine-api.ts";
 import { HerdrSidebarConfig, herdrConfigPath } from "./herdr-sidebar.ts";
 import { MachineRelay } from "./machine-relay.ts";
+import { DesktopRelay, desktopTargetFromEnv } from "./desktop-relay.ts";
 import { sameOrigin } from "./machine-security.ts";
 import { PLUGIN_LOG_LIMIT, pluginActionResult, pluginLogEntry, pluginPaneContext, waitForPluginAction } from "./plugin-actions.ts";
 
@@ -1245,6 +1246,28 @@ export function createServer(
         return new Response("websocket upgrade required", { status: 426 });
       }
 
+      // v3 spike C: the desktop window's RFB-over-WS bridge. Binary frames
+      // both ways to the instance's acpsup VNC endpoint; the whole existing
+      // auth chain still gates the upgrade, and the upstream target/key come
+      // from the environment, never from the browser.
+      if (pathname === "/desktop") {
+        if (!sameOrigin(request)) return new Response("invalid origin", { status: 403 });
+        if (access.level === "none") return unauthorizedJson(access.reason);
+        const target = desktopTargetFromEnv();
+        if (!target) return jsonResponse({ error: { code: "desktop_not_configured", message: "No desktop endpoint is configured on this server" } }, 503);
+        const desktopRelay = new DesktopRelay(target);
+        try {
+          await desktopRelay.ready;
+          const upgraded = bunServer.upgrade(request, { data: connectionData({ desktopRelay, deviceId: access.level === "full" ? access.device?.id : undefined, readOnly }) });
+          if (upgraded) return undefined as unknown as Response;
+          desktopRelay.close();
+        } catch {
+          desktopRelay.close();
+          return new Response("desktop upstream unavailable", { status: 502 });
+        }
+        return new Response("websocket upgrade required", { status: 426 });
+      }
+
       if (pathname === "/api/auth") {
         // signing out also ends the page media this browser was given (by its device, else by its address)
         // a browser can hold the token and a device cookie at once, and its renders are then the
@@ -1537,6 +1560,7 @@ export function createServer(
       async open(client) {
         if (!admit(client)) return;
         if (client.data.relay) { client.data.relay.bind(client as ServerWebSocket<unknown>); return; }
+        if (client.data.desktopRelay) { client.data.desktopRelay.bind(client as ServerWebSocket<unknown>); return; }
         clients.add(client);
         const snapshot = clientSnapshot();
         countVisit(snapshot);
@@ -1557,6 +1581,7 @@ export function createServer(
           if (!client.data.relay) countVisit();
         } else if (presence === false) present.delete(client);
         if (client.data.relay) { client.data.relay.message(raw); return; }
+        if (client.data.desktopRelay) { client.data.desktopRelay.message(raw); return; }
         if (presence !== null) return;
         let message: ClientMessage;
         try {
@@ -2199,6 +2224,7 @@ export function createServer(
       },
 
       close(client) {
+        client.data.desktopRelay?.close();
         end(client, "closed");
       },
     },

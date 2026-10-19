@@ -8,6 +8,7 @@ import type { ClientRole, ServerMessage } from "../../shared/protocol.ts";
 import { OUTPUT_STALLED_CLOSE_CODE } from "../../shared/terminal-flow.ts";
 import type { DeviceStore } from "../devices.ts";
 import { HerdrError, herdrSocketPath } from "../herdr/client.ts";
+import type { DesktopRelay } from "../desktop-relay.ts";
 import type { MachineRelay } from "../machine-relay.ts";
 import { OUTPUT_HARD_BYTES, type OutputWindow } from "../output-window.ts";
 import type { PendingInputs } from "../pending-input.ts";
@@ -17,6 +18,8 @@ export interface SocketData {
   deviceId?: string;
   readOnly?: boolean;
   relay?: MachineRelay;
+  /** v3 spike C: the /desktop binary bridge to acpsup VNC, when this socket is one. */
+  desktopRelay?: DesktopRelay;
   /** A fresh claim per attach lifetime; deleting it invalidates queued terminal keys. */
   attached: Map<string, { keepSize: boolean }>;
   conversationInterests: Set<string>;
@@ -44,7 +47,7 @@ function stateOf(client: Client): ConnectionState {
 }
 
 /** The data for a connection's upgrade: it starts to interact unless its access is read-only. */
-export function connectionData(fields: { relay?: MachineRelay; deviceId: string | undefined; readOnly: boolean }): SocketData {
+export function connectionData(fields: { relay?: MachineRelay; desktopRelay?: DesktopRelay; deviceId: string | undefined; readOnly: boolean }): SocketData {
   const data: SocketData = { attached: new Map<string, { keepSize: boolean }>(), conversationInterests: new Set<string>(), output: new Map(), ...fields };
   states.set(data, { closing: false, revoked: false, mode: fields.readOnly ? "observe" : "interact", roles: 0, watches: new Map<string, PaneWatch>() });
   return data;
