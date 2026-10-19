@@ -107,6 +107,8 @@ export const ZH: Record<string, string> = {
   "Sent directly to this terminal. Never saved as a draft or queued.": "直接发送到此终端，不会存为草稿或加入待发队列。",
   // ---- settings ----
   "Back to console": "返回控制台",
+  "No instances yet": "还没有实例",
+  "Create one in the console": "去控制台新建",
   "Settings": "设置",
   "Close settings": "关闭设置",
   "Appearance": "外观",

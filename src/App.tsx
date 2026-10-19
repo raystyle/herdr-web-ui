@@ -35,6 +35,7 @@ import { RowMenu, type RowMenuItem } from "./components/RowMenu.tsx";
 import { focusWorkspaceListToggle } from "./lib/focus.ts";
 import { headerCrumb, showsChat } from "./lib/headerCrumb.ts";
 import { LOCAL_MACHINE, paneStorageId, type Machine, type MachineEvent } from "../shared/machines.ts";
+import { controlConsole, instanceMachine } from "./lib/controlMode.ts";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
 import { applyPaneStatus } from "./lib/snapshot.ts";
 import { setAgentRowTokens } from "./lib/agentRowTokens.ts";
@@ -247,6 +248,9 @@ export function App() {
   const selectedMachine = machines.find((m) => m.id === selectedMachineId);
   const snapshot = selectedMachine?.snapshot ?? null;
   const machinesRef = useRef(machines); machinesRef.current = machines;
+  // [v3] 总控台形态:机器视图只显 instance-* 容器实例(local/lan-* 隐藏,
+  // 册不删——fleet 跨机道依赖完整清单)
+  const visibleMachines = controlConsole ? machines.filter(instanceMachine) : machines;
   const [updateRemote, setUpdateRemote] = useState(false);
   const [machineDialog, setMachineDialog] = useState<Machine | "new" | null>(null);
   // Add PC from Settings or the palette leaves no trigger to return focus to once its dialog
@@ -347,6 +351,15 @@ export function App() {
   // with a generation (lib/selectionMark.ts): a call that answers after the user opened another pane or PC leaves
   // the selection alone. Marked at commit, not in render: a render React throws away (Strict Mode, a replay)
   // must not move the generation on, and every reader runs from an event or a reply, after the commit
+  // [v3] 总控形态默认落地:local 命中隐藏集→改选首个 connected 实例;
+  // 无实例连接时保持(空态引导由渲染层给)
+  useEffect(() => {
+    if (!controlConsole) return
+    const ok = visibleMachines.some((m) => m.id === selectedMachineId)
+    if (ok) return
+    const first = visibleMachines.find((m) => m.state === "connected") ?? visibleMachines[0]
+    if (first) selectTargetRef.current(first.id, null)
+  }, [visibleMachines, selectedMachineId])
   const selectionRef = useRef<SelectionMark>({ machineId: selectedMachineId, paneId: selectedPaneId, generation: 0 });
   useLayoutEffect(() => {
     selectionRef.current = markSelection(selectionRef.current, selectedMachineId, selectedPaneId);
@@ -1628,7 +1641,7 @@ export function App() {
           {/* a sidebar that cannot be drawn leaves the panes working */}
           <RenderBoundary resetKey={null} fallback={(retry) => <RegionCrash message={t("The sidebar can't be shown.")} retry={retry} />}>
             <CrashProbe region="sidebar" />
-            <MachineSidebar machines={machines} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
+            <MachineSidebar machines={visibleMachines} selectedMachineId={selectedMachineId} selectedPaneId={selectedPaneId} actions={actions} onSelect={selectTarget} onSetup={(machine, update = false) => { setUpdateRemote(update); setMachineDialog(machine); }} onNew={(id) => { setNewSessionMachineId(id); setNewTab(null); setNewSessionOpen(true); setDrawerOpen(false); }} />
           </RenderBoundary>
           <SidebarResizer width={sidebarWidth} onResize={setSidebarWidth} />
         </aside>
@@ -1641,6 +1654,12 @@ export function App() {
         <WebPanelContext.Provider value={filePanelAvailable ? openWebPage : null}>
         <div className={`pane-column${chatShown ? " is-chat" : ""}`}>
         {/* over the pane only: a bar across the window would cut the sidebar off from its top row in the header */}
+        {controlConsole && visibleMachines.length === 0 && (
+          <div className="tree-state" role="status" style={{ padding: "1.5rem", textAlign: "center" }}>
+            <p>{t("No instances yet")}</p>
+            <button className="btn" onClick={() => { window.location.href = "/" }}>{t("Create one in the console")}</button>
+          </div>
+        )}
         <UpdateNotice updates={updates} onOpen={() => { setSettingsSection("updates"); setSettingsOpen(true); }} />
         <TelemetryNotice enabled={locked === false} onOpen={() => { setSettingsSection("updates"); setSettingsOpen(true); }} />
         <MachineActionBanner machines={machines} onSetup={(machine, update = false) => { setDrawerOpen(false); setUpdateRemote(update); setMachineDialog(machine); }} />
