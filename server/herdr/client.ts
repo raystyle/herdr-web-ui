@@ -113,6 +113,9 @@ export async function herdrRpc(
   guard?: () => boolean,
 ): Promise<unknown> {
   const id = nextId();
+  // [v3 V3-O] herdr RPC client span(响应 id 包;socket 面零改帧——
+  // herdr NDJSON 不认 traceparent,进程内缺口留白,client span 即链尾)
+  import("../observability.ts").then((obs) => obs.rpcSpanStart(id, method)).catch(() => {});
   return await new Promise<unknown>((resolve, reject) => {
     let settled = false;
     let socket: { end: () => void } | null = null;
@@ -140,9 +143,11 @@ export async function herdrRpc(
       try {
         frame = JSON.parse(line) as typeof frame;
       } catch {
+        void import("../observability.ts").then((obs) => obs.rpcSpanEnd(id, true)).catch(() => {});
         finish(() => reject(new HerdrError("bad_frame", `herdr sent unparseable frame: ${line.slice(0, 200)}`)));
         return;
       }
+      void import("../observability.ts").then((obs) => obs.rpcSpanEnd(frame.id ?? id, Boolean(frame.error))).catch(() => {});
       if (frame.error) {
         const { code = "herdr_error", message = "herdr request failed" } = frame.error;
         finish(() => reject(new HerdrError(code, message)));

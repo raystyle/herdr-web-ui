@@ -77,6 +77,7 @@ import { handleMachineRequest } from "./machine-api.ts";
 import { HerdrSidebarConfig, herdrConfigPath } from "./herdr-sidebar.ts";
 import { MachineRelay } from "./machine-relay.ts";
 import { DesktopRelay, desktopTargetFromEnv } from "./desktop-relay.ts";
+import * as obs from "./observability.ts";
 import { sameOrigin } from "./machine-security.ts";
 import { PLUGIN_LOG_LIMIT, pluginActionResult, pluginLogEntry, pluginPaneContext, waitForPluginAction } from "./plugin-actions.ts";
 
@@ -1119,12 +1120,7 @@ export function createServer(
   });
 
   const envPort = process.env["PORT"];
-  const server = Bun.serve<SocketData>({
-    port: options.port ?? (envPort ? Number(envPort) : DEFAULT_PORT),
-    hostname,
-    maxRequestBodySize: BUN_BODY_CEILING,
-
-    async fetch(request, bunServer) {
+  const fetchInner = async (request: Request, bunServer: Bun.Server<SocketData>): Promise<Response | undefined> => {
       const startup = portalStartupResult ?? await portalStartup;
       if (!startup.ok) return compressResponse(request, errorResponse(startup.error));
       // the route's answer, gzipped for a browser that takes it (server/compress.ts)
@@ -1235,13 +1231,14 @@ export function createServer(
           try {
             relay = new MachineRelay(machines, machineId, readOnly);
             await relay.ready;
-            const upgraded = bunServer.upgrade(request, { data: connectionData({ relay, deviceId, readOnly }) });
+            const upgraded = obs.withHandshakeSpan("machine", () => bunServer.upgrade(request, { data: connectionData({ relay, deviceId, readOnly }) }));
             if (upgraded) return undefined as unknown as Response;
+            obs.wsUpgradeFailure("machine", "426");
             relay.close();
-          } catch { relay?.close(); return new Response("remote websocket unavailable", { status: 502 }); }
+          } catch { relay?.close(); obs.wsUpgradeFailure("machine", "502"); return new Response("remote websocket unavailable", { status: 502 }); }
           return new Response("websocket upgrade required", { status: 426 });
         }
-        const upgraded = bunServer.upgrade(request, { data: connectionData({ deviceId, readOnly }) });
+        const upgraded = obs.withHandshakeSpan("app", () => bunServer.upgrade(request, { data: connectionData({ deviceId, readOnly }) }));
         if (upgraded) return undefined as unknown as Response;
         return new Response("websocket upgrade required", { status: 426 });
       }
@@ -1254,17 +1251,20 @@ export function createServer(
         if (!sameOrigin(request)) return new Response("invalid origin", { status: 403 });
         if (access.level === "none") return unauthorizedJson(access.reason);
         const target = desktopTargetFromEnv();
-        if (!target) return jsonResponse({ error: { code: "desktop_not_configured", message: "No desktop endpoint is configured on this server" } }, 503);
+        if (!target) { obs.wsUpgradeFailure("desktop", "503"); return jsonResponse({ error: { code: "desktop_not_configured", message: "No desktop endpoint is configured on this server" } }, 503); }
         const desktopRelay = new DesktopRelay(target, readOnly); // F-3: watch 角色键鼠不得达桌面
         try {
           await desktopRelay.ready;
-          const upgraded = bunServer.upgrade(request, { data: connectionData({ desktopRelay, deviceId: access.level === "full" ? access.device?.id : undefined, readOnly }) });
+          const upgraded = obs.withHandshakeSpan("desktop", () => bunServer.upgrade(request, { data: connectionData({ desktopRelay, deviceId: access.level === "full" ? access.device?.id : undefined, readOnly }) }));
           if (upgraded) return undefined as unknown as Response;
+          obs.wsUpgradeFailure("desktop", "426");
           desktopRelay.close();
         } catch {
+          obs.wsUpgradeFailure("desktop", "502");
           desktopRelay.close();
           return new Response("desktop upstream unavailable", { status: 502 });
         }
+        obs.wsUpgradeFailure("desktop", "426");
         return new Response("websocket upgrade required", { status: 426 });
       }
 
@@ -1548,7 +1548,18 @@ export function createServer(
       // static client - public even when the API is gated, so the login UI can load
       return serveStatic(pathname, request.headers.get("accept-encoding"), requestOrigin(request));
       })());
-    },
+  };
+
+  obs.setupObservability(); // [v3 V3-O] OTLP 出宿主 collector(tracer+meter)
+  const server = Bun.serve<SocketData>({
+    port: options.port ?? (envPort ? Number(envPort) : DEFAULT_PORT),
+    hostname,
+    maxRequestBodySize: BUN_BODY_CEILING,
+
+    // [v3 V3-O] 手包观测:一请求一 span(traceparent Extract 续网关链;
+    // Bun 无自动仪器,grok/Datadog 不支持运行时同形)
+    fetch: (request, bunServer) => obs.withRequestSpan(request, () => fetchInner(request, bunServer)),
+
 
     websocket: {
       // This transport cap also covers clients that predate application ACKs.
@@ -1559,8 +1570,9 @@ export function createServer(
       },
       async open(client) {
         if (!admit(client)) return;
-        if (client.data.relay) { client.data.relay.bind(client as ServerWebSocket<unknown>); return; }
-        if (client.data.desktopRelay) { client.data.desktopRelay.bind(client as ServerWebSocket<unknown>); return; }
+        // [v3 V3-O] WS 活跃计数(不按帧打 span;连接生命周期不入 HTTP 直方图)
+        if (client.data.relay) { obs.wsConnect("machine"); client.data.relay.bind(client as ServerWebSocket<unknown>); return; }
+        if (client.data.desktopRelay) { obs.wsConnect("desktop"); client.data.desktopRelay.bind(client as ServerWebSocket<unknown>); return; }
         clients.add(client);
         const snapshot = clientSnapshot();
         countVisit(snapshot);
@@ -2224,6 +2236,9 @@ export function createServer(
       },
 
       close(client) {
+        // [v3 V3-O] WS 断连计数(与 open 对称;relay/desktop/本机三道)
+        if (client.data.desktopRelay) obs.wsDisconnect("desktop");
+        else if (client.data.relay) obs.wsDisconnect("machine");
         client.data.desktopRelay?.close();
         end(client, "closed");
       },
