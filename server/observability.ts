@@ -67,9 +67,11 @@ function routeClass(pathname: string): string {
  */
 export function withRequestSpan<T>(request: Request, run: () => Promise<T>): Promise<T> {
   const tracer = trace.getTracer("haoxuan-web");
-  const ctx = propagation.extract(context.active(), {
-    get: (k: string) => request.headers.get(k) ?? undefined,
-    keys: () => [...request.headers.keys()],
+  // 显式 getter(propagation.extract 第三参;缺省 getter 按属性直取,自定义
+  // 对象的 get() 不会被调——首发即此坑,跨服务链断)
+  const ctx = propagation.extract(context.active(), request.headers, {
+    get: (headers, key) => headers.get(key) ?? undefined,
+    keys: (headers) => [...headers.keys()],
   });
   const url = new URL(request.url);
   const span = tracer.startSpan(
