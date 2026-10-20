@@ -44,21 +44,26 @@ describe("DesktopRelay watch role (F-3)", () => {
 
   test("watch drops key, pointer and cut-text, keeps the rendering messages", async () => {
     const relay = await relayOf(true);
-    relay.message(Buffer.from([4, 1, 0, 0, 0, 65, 1])); // KeyEvent
-    relay.message(Buffer.from([5, 1, 10, 10, 0, 0])); // PointerEvent
-    relay.message(Buffer.from([6, 0, 0, 0, 3, 97, 98, 99])); // ClientCutText
+    relay.message(Buffer.from([4, 1, 0, 0, 0, 41, 0, 95])); // KeyEvent(8B 恰形)
+    relay.message(Buffer.from([5, 1, 0, 10, 0, 10])); // PointerEvent(6B 恰形)
+    relay.message(Buffer.from([6, 0, 0, 0, 3, 97, 98, 99])); // ClientCutText(非16B)
     relay.message(Buffer.from([2, 0, 0, 0, 0])); // SetEncodings
     relay.message(Buffer.from([3, 1, 0, 0, 0, 10, 10])); // FramebufferUpdateRequest
     relay.message(Buffer.from([0, 0])); // SetPixelFormat
-    await until(() => received.length >= 3);
-    expect(received).toEqual([2, 3, 0]);
+    relay.message(Buffer.from("RFB 003.008\n", "latin1")); // 版本 echo(12B,握手)
+    relay.message(Buffer.from([1])); // ClientInit(1B,握手)
+    relay.message(Buffer.from([4, 0, 0, 0, 0])); // 5 字节非恰形(如 DES 片段)——放行
+    await until(() => received.length >= 6);
+    // 弃:键(恰形)/指针(恰形)/剪贴板(非16B);放行:渲染三型+版本echo
+    // (首字节 'R'=82)+ClientInit(1)+非恰形片段
+    expect(received).toEqual([2, 3, 0, 82, 1, 4]);
     relay.close();
   });
 
   test("the full role passes input straight through", async () => {
     const relay = await relayOf(false);
-    relay.message(Buffer.from([4, 1, 0, 0, 0, 65, 1])); // KeyEvent
-    relay.message(Buffer.from([5, 1, 10, 10, 0, 0])); // PointerEvent
+    relay.message(Buffer.from([4, 1, 0, 0, 0, 41, 0, 95])); // KeyEvent
+    relay.message(Buffer.from([5, 1, 0, 10, 0, 10])); // PointerEvent
     await until(() => received.length >= 2);
     expect(received).toEqual([4, 5]);
     relay.close();

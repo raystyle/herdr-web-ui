@@ -106,11 +106,15 @@ export class DesktopRelay {
       return;
     }
     if (this.readOnly) {
-      // F-3 (kimi 终审): watch 只看不摸——RFB 客户端消息按型过滤:键(4)/
-      // 指针(5)/剪贴板入(6)弃;像素格式(0)/编码(2)/帧更新请求(3)是渲染
-      // 必需,放行,画面照流。noVNC 每 WS 帧恰一条 RFB 消息,首字节即型。
+      // F-3 (kimi 终审): watch 只看不摸。RFB 客户端消息按型过滤——但中继
+      // 是裸字节管道,分不清握手帧与消息帧(首字节空间冲突:DES 响应/
+      // ClientInit 的首字节可为任意值),按「输入消息的精确形」过滤:
+      // KeyEvent=型4 恰 8 字节,PointerEvent=型5 恰 6 字节,ClientCutText=
+      // 型6 且非 16 字节(16 让给 DES 响应形)。握手帧(12B 版本/1B 安全选/
+      // 16B DES/1B ClientInit)与渲染必需(0/2/3)全放行——watch 能看不能摸。
       const type = typeof raw === "string" ? raw.charCodeAt(0) : raw[0];
-      if (type !== 0 && type !== 2 && type !== 3) return;
+      const len = raw.length;
+      if ((type === 4 && len === 8) || (type === 5 && len === 6) || (type === 6 && len !== 16)) return;
     }
     this.upstream.send(typeof raw === "string" ? raw : new Uint8Array(raw));
   }
