@@ -75,6 +75,31 @@ export interface AgentSidebarProps {
 /** the width under which the sidebar is a drawer (src/styles.css) */
 const DRAWER_QUERY = "(max-width: 768px)";
 interface AgentRow { machine: Machine; entry: SidebarAgent }
+
+/** [v3] 树形分组:agent 行按 机器 → 工作区 两级折叠(用户令——侧栏要完全树状)。 */
+interface AgentTreeWorkspace { key: string; workspaceId: string; label: string; rows: AgentRow[] }
+interface AgentTreeMachine { key: string; machine: Machine; workspaces: AgentTreeWorkspace[] }
+
+function buildTree(rows: readonly AgentRow[]): AgentTreeMachine[] {
+  const machines = new Map<string, AgentTreeMachine>();
+  for (const row of rows) {
+    const { machine, entry } = row;
+    const mKey = machine.id;
+    let m = machines.get(mKey);
+    if (!m) {
+      m = { key: mKey, machine, workspaces: [] };
+      machines.set(mKey, m);
+    }
+    const wKey = `${mKey}::${entry.workspace.workspace_id}`;
+    let w = m.workspaces.find((candidate) => candidate.key === wKey);
+    if (!w) {
+      w = { key: wKey, workspaceId: entry.workspace.workspace_id, label: entry.workspace.label, rows: [] };
+      m.workspaces.push(w);
+    }
+    w.rows.push(row);
+  }
+  return [...machines.values()];
+}
 /** The row whose menu is open, by its pin key: at its ⋯, or at the pointer for a right-click */
 interface PinMenu { key: string; anchor: HTMLElement; point?: { x: number; y: number }; previousFocus?: HTMLElement | null; title: string; place: string; tokens: string }
 
@@ -127,8 +152,17 @@ export function AgentSidebar({ machines, selectedMachineId, selectedPaneId, stat
   }, [menu, split]);
   // herdr names a PC only beside another: the rows' line does the same
   const machineName = (machine: Machine): string | null => machines.length > 1 ? machine.name : null;
+  // [v3] 树形:组头已说机器/工作区,叶行不再重复(agentContext 空串即滤)
+  const [foldedGroups, setFoldedGroups] = useState<ReadonlySet<string>>(new Set());
+  const toggleGroup = useCallback((key: string): void => {
+    setFoldedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
 
-  const agentItem = ({ machine, entry }: AgentRow) => {
+  const agentItem = ({ machine, entry }: AgentRow, inTree = false) => {
     const { pane, workspace, tab, agent, agentLabel } = entry;
     const selected = machine.id === selectedMachineId && pane.pane_id === selectedPaneId;
     const online = machine.state === "connected";
@@ -139,7 +173,7 @@ export function AgentSidebar({ machines, selectedMachineId, selectedPaneId, stat
     const tabs = machine.snapshot?.tabs.filter((candidate) => candidate.workspace_id === workspace.workspace_id) ?? [];
     const mark = paneMark(entry);
     const markAgent = mark && hasAgentMark(mark) ? mark : null;
-    const parts = { agentLabel: kindLabel, title, markAgent, machineName: machineName(machine), workspaceLabel: workspace.label, tabName: agentTabName(tab, tabs, t) };
+    const parts = { agentLabel: kindLabel, title, markAgent, machineName: inTree ? null : machineName(machine), workspaceLabel: inTree ? "" : workspace.label, tabName: agentTabName(tab, tabs, t) };
     const contextParts = agentContext(parts);
     const context = contextParts.join(" · ");
     const kind = kindLabel?.trim() || null;
@@ -189,6 +223,8 @@ export function AgentSidebar({ machines, selectedMachineId, selectedPaneId, stat
   };
   // Settings -> Sidebar rows -> One line: an agent row is one line too, its place dim after its title
   const oneLine = settings.sidebarRows === "one";
+  // [v3] 树形数据:按 机器 → 工作区 分组(byActivity 排序仅作用组内行,组序稳定)
+  const tree = useMemo(() => buildTree(split.rest), [split]);
   return <section ref={sectionRef} className={`agents-sidebar${collapsed ? " is-collapsed" : ""}${rows.length === 0 ? " is-empty" : ""}${oneLine ? " is-one-line" : ""}`} aria-label={t("Agents")}>
     <button type="button" className="agent-section-toggle sidebar-section-label" aria-expanded={!collapsed} aria-controls={listId} onClick={() => setCollapsed(!collapsed)}>
       {collapsed ? <ChevronRight className="agent-section-caret" aria-hidden="true" /> : <ChevronDown className="agent-section-caret" aria-hidden="true" />}
@@ -200,9 +236,35 @@ export function AgentSidebar({ machines, selectedMachineId, selectedPaneId, stat
       {rows.length > 0 && <>
         {split.pinned.length > 0 && <>
           <p className="sidebar-pinned-label" aria-hidden="true"><span><Pin />{t("Pinned")}</span></p>
-          <ul className="agent-list agent-list-pinned sidebar-pinned" aria-label={t("Pinned")}>{split.pinned.map(agentItem)}</ul>
+          <ul className="agent-list agent-list-pinned sidebar-pinned" aria-label={t("Pinned")}>{split.pinned.map((row) => agentItem(row, false))}</ul>
         </>}
-        {split.rest.length > 0 && <ul className="agent-list">{split.rest.map(agentItem)}</ul>}
+        {tree.length > 0 && <ul className="agent-list agent-tree" role="tree">
+          {tree.map(({ key: mKey, machine, workspaces }) => {
+            const machineFolded = foldedGroups.has(mKey);
+            const machineOnline = machine.state === "connected";
+            return <li className="agent-tree-machine" key={mKey} role="treeitem" aria-expanded={!machineFolded}>
+              <button type="button" className="agent-tree-node agent-tree-machine-node" aria-expanded={!machineFolded} onClick={() => toggleGroup(mKey)}>
+                {machineFolded ? <ChevronRight className="agent-tree-caret" aria-hidden="true" /> : <ChevronDown className="agent-tree-caret" aria-hidden="true" />}
+                <span className="agent-tree-machine-name">{machine.name}</span>
+                {!machineOnline && <span className="agent-tree-state">{stateWord(machine)}</span>}
+              </button>
+              <ul className="agent-tree-workspaces" role="group" hidden={machineFolded}>
+                {workspaces.map(({ key: wKey, label, rows: wRows }) => {
+                  const wFolded = foldedGroups.has(wKey);
+                  return <li className="agent-tree-workspace" key={wKey} role="treeitem" aria-expanded={!wFolded}>
+                    <button type="button" className="agent-tree-node agent-tree-workspace-node" aria-expanded={!wFolded} onClick={() => toggleGroup(wKey)}>
+                      {wFolded ? <ChevronRight className="agent-tree-caret" aria-hidden="true" /> : <ChevronDown className="agent-tree-caret" aria-hidden="true" />}
+                      <span className="agent-tree-workspace-label">{label}</span>
+                    </button>
+                    <ul className="agent-list agent-tree-leaves" role="group">
+                      {wRows.map((row) => agentItem(row, true))}
+                    </ul>
+                  </li>;
+                })}
+              </ul>
+            </li>;
+          })}
+        </ul>}
       </>}
     </div>
     {menu && <RowMenu anchor={menu.anchor} point={menu.point} restoreFocusTo={menu.previousFocus} title={menu.title} subtitle={menu.place} detail={menu.tokens || undefined} onClose={closeMenu} items={[

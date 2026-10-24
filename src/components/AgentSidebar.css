@@ -269,3 +269,48 @@
   .agent-row:enabled:active { opacity: 1; }
   .agent-item:has(> .agent-row:enabled:active) { background: var(--side-hover); }
 }
+
+/* [v3] 树形:机器 → 工作区 → agent 三级;组头一行,子级缩进对齐 */
+.agent-tree { padding: 0; }
+
+.agent-tree-machine > .agent-tree-workspaces {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.agent-tree-workspace > .agent-tree-leaves {
+  padding-inline-start: calc(var(--side-box, 32px) - 6px);
+  margin-block: 0;
+}
+
+.agent-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: var(--side-box, 32px);
+  padding-inline: calc((var(--side-box, 32px) - var(--space-4, 16px)) / 2);
+  border: none;
+  border-radius: var(--radius, 8px);
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: start;
+  cursor: pointer;
+}
+
+.agent-tree-node:hover { background: var(--side-hover, rgba(127, 127, 127, 0.12)); }
+.agent-tree-node:focus-visible { outline: 2px solid var(--accent, currentColor); outline-offset: -2px; }
+
+.agent-tree-caret { flex: none; width: 14px; height: 14px; opacity: 0.7; }
+
+.agent-tree-machine-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-tree-workspace-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-tree-state { margin-inline-start: auto; font-weight: 400; opacity: 0.7; }
+
+/* 工作区级组头再缩一层 */
+.agent-tree-workspace > .agent-tree-node { padding-inline-start: calc(var(--side-box, 32px) - 2px); font-weight: 500; }
