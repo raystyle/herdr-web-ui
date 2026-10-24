@@ -151,7 +151,7 @@ export class MachineManager {
   private localRevision = 0;
   /** each local pane's agent as herdr last named it to the status collector */
   private heardAgents = new AgentNews();
-  private localTimer: ReturnType<typeof setInterval>;
+  private localTimer?: ReturnType<typeof setInterval>;
   private saveTimer?: ReturnType<typeof setTimeout>;
   private profileState: HerdrProfileState;
   private statePath: string;
@@ -191,9 +191,12 @@ export class MachineManager {
         if (item.enabled) queueMicrotask(() => void this.reconnect(runtime));
       }
     }
-    void this.refreshLocal();
-    this.localTimer = setInterval(() => void this.refreshLocal(), 5000);
-    this.localTimer.unref();
+    // [v3] 舰队单源形:fleet-only 时本机 local 快照刷了也进不了面,停刷省一遍 5s 轮询
+    if (!this.fleetOnly()) {
+      void this.refreshLocal();
+      this.localTimer = setInterval(() => void this.refreshLocal(), 5000);
+      this.localTimer.unref();
+    }
   }
   /** Serial polling: a broken catalog preserves the last roster instead of removing PCs. */
   watchHerdrProfiles(read: () => Promise<HerdrMachineProfile[]>, intervalMs = 5000): void {
@@ -298,7 +301,18 @@ export class MachineManager {
     }
   }
   private runtime(machine: Machine): Runtime { machine.lastActivityAt ??= null; return { machine, attempts: 0, generation: 0, refreshing: false, refreshQueued: false, snapshotRevision: 0, terminals: new Set() }; }
-  list(): Machine[] { return [this.local, ...[...this.machines.values()].map((r) => r.machine)]; }
+  // [v3] 舰队单源形(用户令):宿主 7318 总控只列 socket 容器行,本机
+  // local 行与宿主 herdr machine 册(ssh/mesh 群)不进面——容器舰队是
+  // 唯一操作对象,真机会话属宿主侧自己的 herdr,不由总控页代管。
+  // HERDR_WEB_FLEET_ONLY=socket 开;缺省原形(上游行为不变)。
+  private fleetOnly(): boolean { return process.env.HERDR_WEB_FLEET_ONLY === "socket"; }
+  list(): Machine[] {
+    const registered = [...this.machines.values()].map((r) => r.machine);
+    if (this.fleetOnly()) {
+      return registered.filter((m) => m.kind === "socket");
+    }
+    return [this.local, ...registered];
+  }
   subscribe(listener: (event: MachineEvent) => void): () => void {
     this.listeners.add(listener);
     listener({ type: "machines", machines: this.list() });
