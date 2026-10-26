@@ -3,7 +3,7 @@
 // 指向编排器的 incus unix↔unix 代理 socket(→ 容器 herdr.sock)。零 SSH、
 // 零远端 bundle;descriptor 按	socket 哈希键落共享注册表(bridge.ts),
 // 活桥复用(同名不重启),死描述符重 spawn。
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { descriptorPath, type BridgeDescriptor } from "./bridge.ts";
@@ -16,7 +16,12 @@ export interface SocketBridge {
 
 function readDescriptor(socketPath: string): BridgeDescriptor | null {
   try {
-    const d = JSON.parse(readFileSync(descriptorPath(resolve(socketPath)), "utf8")) as BridgeDescriptor;
+    // hash key 必须与写方 remote-entry 一致:descriptorPath() 内 socketPath()
+    // 先 realpath 再 hash。注册径隔软链(/run/haoxuan → /mnt/…-run)时,
+    // 只 resolve 不 realpath 会 hash 出另一把钥匙,活桥永远查不到。
+    const abs = resolve(socketPath);
+    const real = realpathSync(abs);
+    const d = JSON.parse(readFileSync(descriptorPath(real), "utf8")) as BridgeDescriptor;
     if (!Number.isInteger(d.pid) || !Number.isInteger(d.port) || typeof d.token !== "string") return null;
     return d;
   } catch {
