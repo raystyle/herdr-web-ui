@@ -257,6 +257,7 @@ export const JA: Record<string, string> = {
   "disconnected": "切断",
   "reconnecting": "再接続中",
   "connecting": "接続しています",
+  "Agent type": "エージェントの種類",
   "herdr offline": "herdr オフライン",
   "Start herdr on this PC, or check HERDR_SOCKET.": "この PC で herdr を起動するか、HERDR_SOCKET を確認してください。",
   "Browse files": "ファイルを参照",

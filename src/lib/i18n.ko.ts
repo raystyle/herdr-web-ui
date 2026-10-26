@@ -255,6 +255,7 @@ export const KO: Record<string, string> = {
   "disconnected": "끊김",
   "reconnecting": "재연결 중",
   "connecting": "연결 중",
+  "Agent type": "에이전트 유형",
   "herdr offline": "herdr 꺼짐",
   "Start herdr on this PC, or check HERDR_SOCKET.": "이 PC에서 herdr를 시작하거나 HERDR_SOCKET을 확인하세요.",
   "Browse files": "파일 찾아보기",

@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Bot, Monitor, Pause, Play, Plus, Trash2 } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
-import { createInstance, type AgentKind, type InstanceKind } from "../lib/instanceLifecycle.ts";
+import { createInstance, type AgentKind, type GatewayAgentType, type InstanceKind } from "../lib/instanceLifecycle.ts";
 
 /** 新建实例对话框(F5:类型 system|app 双现役;首启 agent 多选:缺省 pi,
  * 可多选,全不勾=不编排——on-ready 钩子经 socket 道补建,两型同律)。 */
@@ -12,7 +12,8 @@ export function NewInstanceDialog({ onDone, onClose }: { onDone: (id: string) =>
   const t = useT();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<InstanceKind>("system");
-  const [agents, setAgents] = useState<Record<AgentKind, boolean>>({ pi: true, claude: false, codex: false });
+  const [agentType, setAgentType] = useState<GatewayAgentType>("claude-code");
+  const [agents, setAgents] = useState<Record<AgentKind, boolean>>({ pi: false, claude: true, codex: false, grok: false, kimi: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +22,7 @@ export function NewInstanceDialog({ onDone, onClose }: { onDone: (id: string) =>
     setBusy(true)
     setError(null)
     const picked = (Object.keys(agents) as AgentKind[]).filter((k) => agents[k])
-    const r = await createInstance(name.trim(), kind, picked)
+    const r = await createInstance(name.trim(), kind, picked, agentType)
     setBusy(false)
     if (r.ok && r.data && typeof r.data === "object" && "id" in r.data) {
       onDone(String((r.data as { id: string }).id))
@@ -39,6 +40,17 @@ export function NewInstanceDialog({ onDone, onClose }: { onDone: (id: string) =>
           <input className="input" value={name} maxLength={64} autoFocus onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") void submit() }} placeholder="v3-instance" />
         </label>
+        <fieldset style={{ border: 0, margin: 0, padding: 0, display: "grid", gap: "0.3rem" }}>
+          <legend className="field-label" style={{ padding: 0 }}>{t("Agent type")}</legend>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.3rem" }}>
+            {([["claude-code", "Claude Code"], ["codex", "Codex"], ["pi-rs", "Pi"], ["grok", "Grok"], ["kimi", "Kimi"]] as Array<[GatewayAgentType, string]>).map(([type, label]) => (
+              <button type="button" key={type} className={`btn${agentType === type ? " btn-primary" : ""}`}
+                onClick={() => { setAgentType(type); setAgents({ pi: false, claude: false, codex: false, grok: false, kimi: false, [type === "pi-rs" ? "pi" : type]: true } as Record<AgentKind, boolean>); }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
         <fieldset style={{ border: 0, margin: 0, padding: 0, display: "grid", gap: "0.3rem" }}>
           <legend className="field-label" style={{ padding: 0 }}>{t("Instance type")}</legend>
           <label style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>

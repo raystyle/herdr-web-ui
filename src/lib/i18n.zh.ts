@@ -262,6 +262,7 @@ export const ZH: Record<string, string> = {
   "reconnecting": "正在重连",
   "connecting": "正在连接",
   "herdr offline": "herdr 离线",
+  "Agent type": "Agent 类型",
   "Start herdr on this PC, or check HERDR_SOCKET.": "请在此电脑上启动 herdr，或检查 HERDR_SOCKET。",
   "Browse files": "浏览文件",
   "Copy link": "复制链接",

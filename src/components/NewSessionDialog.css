@@ -214,3 +214,21 @@
     height: var(--touch-target);
   }
 }
+
+/* [v3] haoxun 五家实例卡(haoxue 批) */
+.new-instance-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-block: 4px 12px; }
+@media (max-width: 640px) { .new-instance-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.new-instance-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 6px; border-radius: 12px; border: 1px solid var(--bg-hover);
+  background: var(--bg-panel); color: var(--fg); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.new-instance-card:hover { background: var(--bg-hover); }
+.new-instance-card.is-selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.new-instance-card:disabled { opacity: 0.5; cursor: default; }
+.new-instance-mark { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-dim); }
+.new-instance-label { font-size: 13px; font-weight: 500; }
+.spin { animation: new-instance-spin 1s linear infinite; }
+@keyframes new-instance-spin { to { transform: rotate(360deg); } }

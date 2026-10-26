@@ -4,7 +4,9 @@
 const GATEWAY = window.location.origin
 
 export type InstanceKind = "system" | "app"
-export type AgentKind = "pi" | "claude" | "codex"
+export type AgentKind = "pi" | "claude" | "codex" | "grok" | "kimi"
+/** agentType(网关侧类型)与 herdr kind 一一对应 */
+export type GatewayAgentType = "claude-code" | "codex" | "pi-rs" | "grok" | "kimi"
 
 export interface InstanceRow {
   id: string
@@ -34,8 +36,8 @@ async function call<T = unknown>(method: string, path: string, body?: unknown): 
   }
 }
 
-export function createInstance(name: string, kind: InstanceKind = "system", agents: AgentKind[] = ["pi"]) {
-  return call<InstanceRow>("POST", "/instances", { name, agentType: "pi-rs", kind, agents })
+export function createInstance(name: string, kind: InstanceKind = "system", agents: AgentKind[] = ["pi"], agentType: GatewayAgentType = "pi-rs") {
+  return call<InstanceRow>("POST", "/instances", { name, agentType, kind, agents })
 }
 export function wakeInstance(publicId: string) {
   return call<InstanceRow>("POST", `/instances/${encodeURIComponent(publicId)}/start`)
