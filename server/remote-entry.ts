@@ -23,6 +23,7 @@ const herdrConfig = windows ? join(process.env["XDG_CONFIG_HOME"] || process.env
 // [v3] socket-machine:外部预设的 HERDR_SOCKET(编排器 incus unix↔unix 代理
 // socket)优先——中央 web-ui 以此为每实例 spawn 本地桥;单行赋值保
 // remote-entry.test 的源行扫描形
+const externalSocket = !session && !!process.env["HERDR_SOCKET"]; // [v3] 外部代理 socket:缺席/拒连时绝不自起 herdr(撞容器主 herdr 的死循环源)
 process.env["HERDR_SOCKET"] = session ? join(herdrConfig, "sessions", session, "herdr.sock") : (process.env["HERDR_SOCKET"] || join(herdrConfig, "herdr.sock"));
 function staleWindowsMarker(path: string): boolean {
   return staleMarker(readFileSync(path, "utf8"), (pid) => {
@@ -77,6 +78,10 @@ try {
   try { await bridgeIdentity(); } catch (error) {
     // A socket that exists but cannot answer is an operator problem, not permission
     // to replace the daemon. Only absent sockets permit starting a new server.
+    // [v3] externalSocket:外部代理 socket 缺席/拒连是编排器/实例侧的事
+    // (重绑窗口等瞬时态),此处绝不 spawn herdr——否则撞容器主 herdr 进
+    // "already running" 死循环,桥永不就绪。
+    if (externalSocket) throw error;
     // on Windows the socket is a marker file `pid:start` that a killed herdr leaves behind;
     // its pid says whether a daemon is really there. Elsewhere a killed herdr (or a reboot)
     // leaves the socket file, and a refused connection says nobody listens on it
