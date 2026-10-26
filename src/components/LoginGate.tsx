@@ -23,11 +23,12 @@ async function fetchCaptcha(): Promise<Captcha | null> {
   }
 }
 
-/** 会话探测:任一 authed 端点 200=已登录;401=未登录;网关未启认证恒 200。 */
+/** 会话探测:200=已登录;401=未登录;501 auth_disabled=网关未启认证,
+ * 按免登录放行(旧实现只认 r.ok,把 501 误判未登录→登录门常驻,2026-10-26 实证)。 */
 export async function probeSession(): Promise<boolean> {
   try {
     const r = await fetch(`${GATEWAY}/api/v1/auth/ws-ticket`, { credentials: "include" })
-    return r.ok
+    return r.ok || r.status === 501
   } catch {
     return false
   }
