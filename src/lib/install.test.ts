@@ -1,6 +1,4 @@
 import { describe, expect, it } from "bun:test";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 
 import { installedState, isAppWindow, type InstalledStateInput } from "./install.ts";
 

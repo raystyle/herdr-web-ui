@@ -24,7 +24,7 @@
  */
 import type { SessionSnapshot } from "../../shared/protocol.ts";
 
-export type LinkView = "chat" | "terminal";
+export type LinkView = "chat" | "terminal" | "desktop";
 
 export interface AppLink {
   machine: string;
@@ -97,7 +97,7 @@ export function readLink(search: string): AppLink {
     workspace: ws && cut > 0 ? ws.slice(0, cut) : ws,
     workspaceSlug: ws && cut > 0 ? named(ws.slice(cut + 1)) : null,
     pane: named(query.get("pane")),
-    view: view === "chat" || view === "terminal" ? view : null,
+    view: view === "chat" || view === "terminal" || view === "desktop" ? view : null,
     file: named(query.get("file")),
     settings,
     section: settings ? named(query.get("section")) : null,

@@ -1,5 +1,5 @@
 import { type CSSProperties, type DragEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Bell, Ellipsis, FolderOpen, Link, Menu, MessageSquare, PanelLeft, Search, SquareTerminal, X } from "lucide-react";
+import { Bell, Ellipsis, FolderOpen, Link, Menu, MessageSquare, Monitor, PanelLeft, Search, SquareTerminal, X } from "lucide-react";
 
 import type { AgentStatus, ServerMessage, AccessRefusal, HealthAuth, HerdrPane } from "../shared/protocol.ts";
 import { ApiError, authenticate, createTab, fetchHealth, fetchBridgeHealth, fetchMachines, fetchSession, pairDevice, routeMissing, sendTestPush, signOut, splitPane, zoomPane, type HealthInfo } from "./lib/api.ts";
@@ -878,7 +878,7 @@ export function App() {
     // the active half alone takes the pick, whatever the other half shows (lib/split.ts)
     setSelectedMachineId(machineId); setSelectedPaneId(paneId); setAutoSelected(false); setDrawerOpen(false);
     setOutputStopped(false);
-    setNotificationViewTarget(view && paneId !== null ? { machine_id: machineId, pane_id: paneId, view } : null);
+    setNotificationViewTarget(view && view !== "desktop" && paneId !== null ? { machine_id: machineId, pane_id: paneId, view } : null);
     // this browser's choice only: herdr's focus, its TUI and every other device stay where they are
     storeSelection(machineId, paneId);
     // a pane picked (a tapped notification, the sidebar, Back) before a link landed supersedes the link
@@ -905,7 +905,7 @@ export function App() {
           if (landed.pane !== selectedPaneId) {
             setSelectedPaneId(landed.pane);
             // the link's lens was for its own pane: the one opened instead keeps its own
-            setNotificationViewTarget(landed.pane === linked.pane && linked.view ? { machine_id: linked.machine, pane_id: landed.pane, view: linked.view } : null);
+            setNotificationViewTarget(landed.pane === linked.pane && linked.view && linked.view !== "desktop" ? { machine_id: linked.machine, pane_id: landed.pane, view: linked.view } : null);
           }
           if (landed.pane !== linked.pane) pendingFile.current = null;
           return true;
@@ -1042,6 +1042,9 @@ export function App() {
   // its lens picked by hand) the pane is back on the lens it had. A shell has no conversation to
   // show (storedView), so its alert opens its own lens; until the snapshot says, it counts as an agent
   if (notificationView !== null && !(notificationView === "chat" && selectedPane !== null && selectedAgent === null)) view = notificationView;
+  // [v3 Kasm 融合] 桌面是机器级透传视图:storedView 只认 chat/terminal,
+  // 换 pane/换机会把 lens 归一到存储值;切到 desktop 后选中态在 lens 里
+  // 存续直到下一次显式切换(不写 localStorage,刷新回上次 pane 视图)。
 
   const pickView = useCallback((machineId: string, paneId: string, next: PaneView) => {
     const key = paneStorageId(machineId, paneId);
@@ -1246,7 +1249,7 @@ export function App() {
   useEffect(() => {
     if (locked !== false || machines.length === 0 || snapshot === null || linkWorkspaceId === undefined || !linkLanded) return;
     const link: AppLink = {
-      machine: selectedMachineId, workspace: linkWorkspaceId, workspaceSlug: linkSlug, pane: selectedPaneId, view: selectedPaneId ? view : null, file: linkFile,
+      machine: selectedMachineId, workspace: linkWorkspaceId, workspaceSlug: linkSlug, pane: selectedPaneId, view: selectedPaneId && view !== "desktop" ? view : null, file: linkFile,
       settings: settingsOpen ? settingsPage : null, section: settingsOpen && settingsPage === settingsLinkPage ? settingsLinkSection : null,
       sidebar: wideScreen && sidebarCollapsed ? "hidden" : null,
       create: newSessionOpen ? { kind: newTab ? "tab" : "workspace", cwd: newFields?.cwd ?? null, name: newFields?.name ?? null, agent: newFields?.agent ?? null } : null,
@@ -1626,6 +1629,13 @@ export function App() {
               <span className="header-desktop-only">{t("Terminal")}</span>
               {!terminalAttach && <span className="pill pill-soon">{t("soon")}</span>}
             </button>
+            {/* [v3 Kasm 融合] 桌面一等视图:选中实例(socket 机)可切 RFB 满铺面 */}
+            {selectedMachine?.kind === "socket" && (
+              <button type="button" aria-pressed={view === "desktop"} onClick={() => { setView("desktop"); setDrawerOpen(false); }} title={t("Desktop")}>
+                <Monitor />
+                <span className="header-desktop-only">{t("Desktop")}</span>
+              </button>
+            )}
           </div>
         )}
         {selectedPane && wideScreen && (
@@ -1712,8 +1722,13 @@ export function App() {
         <MachineActionBanner machines={machines} onSetup={(machine, update = false) => { setDrawerOpen(false); setUpdateRemote(update); setMachineDialog(machine); }} />
         {layoutNotice && <p className="pane-notice" role="alert">{layoutNotice}</p>}
         {health?.lan_exposure && !controlConsole && <LanExposureNotice host={health.lan_exposure.host} onOpen={() => { setSettingsLinkPage("devices"); setSettingsOpen(true); }} />}
-        {/* the pane's tab, or two tabs side by side (lib/split.ts): a tab dragged down out of its strip,
-            or a sidebar row dragged over this area, opens its pane in the half it is dropped on */}
+        {/* [v3 Kasm 融合] 桌面一等视图:选中实例时 view=desktop 满铺 RFB 面
+            (Kasm 形:桌面与 chat/terminal 并列,不再是右侧浮动 dock) */}
+        {view === "desktop" && selectedMachine?.kind === "socket" ? (
+          <div className="desktop-view">
+            <DesktopPanel embedded machineName={selectedMachine.name} publicId={selectedMachine.name.replace(/^instance-/, "")} onClose={() => setView("terminal")} />
+          </div>
+        ) : (
         <div ref={paneAreaRef} className={`pane-split${splitOn ? " is-split" : ""}`} onDragEnterCapture={paneDragOver} onDragOverCapture={paneDragOver} onDragLeave={paneDragLeave} onDropCapture={paneDrop}>
           {(["a", "b"] as const).map((slot) => {
             // one pane: the solo slot, or a split's active half where the window is too narrow for both
@@ -1840,6 +1855,7 @@ export function App() {
           })}
           <SplitDropPreview visible={splitDragOn && (paneDragging || tabDrag !== null)} side={dropAt} />
         </div>
+        )}
         </div>
         </WebPanelContext.Provider>
         </OpenFileContext.Provider>

@@ -10,17 +10,22 @@ import { Maximize2, Monitor, RotateCw, X } from "lucide-react";
 import { useT } from "../lib/i18n.ts";
 import { desktopWsUrl, fetchDesktopPassword, reportResolution } from "../lib/desktop.ts";
 import "./FileViewer.css";
+import "./DesktopPanel.css";
 
 export interface DesktopPanelProps {
   machineName: string
   publicId: string
-  onClose: () => void
+  /** dock 形的关闭钮;embedded 形无 chrome,onClose 由视图切换承载 */
+  onClose?: () => void
   panelStart?: ReactNode
+  /** [v3 Kasm 融合] 内嵌一等视图形:无 dock chrome(面板头/侧栏 resizer),
+   * 满铺 pane 主区,保留断线横幅+重连+全屏 */
+  embedded?: boolean
 }
 
 type DeskState = "connecting" | "live" | "lost"
 
-export function DesktopPanel({ machineName, publicId, onClose, panelStart }: DesktopPanelProps) {
+export function DesktopPanel({ machineName, publicId, onClose, panelStart, embedded = false }: DesktopPanelProps) {
   const t = useT();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const rfbRef = useRef<RFB | null>(null);
@@ -109,11 +114,34 @@ export function DesktopPanel({ machineName, publicId, onClose, panelStart }: Des
   }, [scheduleReport]);
 
   const fullscreen = () => {
-    const frame = hostRef.current?.closest(".file-viewer");
+    const frame = hostRef.current?.closest(embedded ? ".desktop-view" : ".file-viewer");
     if (frame && !document.fullscreenElement) void frame.requestFullscreen().catch(() => {});
     else if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   };
 
+  if (embedded) {
+    // Kasm 形:主区满铺,窄工具条(重连/全屏),断线横幅居中
+    return (
+      <section className="desktop-view-body" aria-label={`${machineName} · ${t("Desktop")}`}>
+        <div className="desktop-view-toolbar">
+          <span className={`machine-dot is-${state === "live" ? "connected" : state === "lost" ? "error" : "connecting"}`} aria-hidden="true" />
+          <span className="desktop-view-title">{machineName}</span>
+          <button type="button" className="icon-button" aria-label={t("Reconnect")} title={t("Reconnect")} onClick={() => void connect()}><RotateCw aria-hidden="true" /></button>
+          <button type="button" className="icon-button" aria-label={t("Fullscreen")} title={t("Fullscreen")} onClick={fullscreen}><Maximize2 aria-hidden="true" /></button>
+        </div>
+        <div className="desktop-view-canvas" style={{ position: "relative", background: "var(--bg)" }}>
+          <div ref={hostRef} style={{ position: "absolute", inset: 0 }} />
+          {state !== "live" && (
+            <div role="status" style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.6rem", color: "var(--text-dim)" }}>
+              <Monitor aria-hidden="true" />
+              <p>{state === "connecting" ? t("Connecting…") : note ?? t("The desktop connection ended")}</p>
+              {state === "lost" && <button className="btn" onClick={() => void connect()}>{t("Reconnect")}</button>}
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  }
   return (
     <aside className="file-panel web-panel" aria-label={`${machineName} · ${t("Desktop")}`}>
       {panelStart}

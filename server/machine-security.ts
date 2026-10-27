@@ -52,7 +52,11 @@ export function sameOrigin(request: Request): boolean {
     const fwdHost = request.headers.get("x-forwarded-host");
     if (websocket && fwdHost) {
       // 仅 WS 道(浏览器升级请求)采信反代声明;host:port 或裸 host 皆可
-      try { expected.host = fwdHost.split(",")[0].trim(); } catch { /* 坏头按原 host 比 */ }
+      const first = fwdHost.split(",")[0]?.trim();
+      if (first) {
+        // 仅 WS 道(浏览器升级请求)采信反代声明;host:port 或裸 host 皆可
+        try { expected.host = first; } catch { /* 坏头按原 host 比 */ }
+      }
     }
     return new URL(origin).origin === expected.origin;
   } catch { return false; }
