@@ -1619,21 +1619,18 @@ export function App() {
           <><Brand /><span className="machine-context-name">{selectedMachine?.name ?? selectedMachineId}</span></>
         )}
         {selectedPane && (
-          <div className="segmented view-switch" role="group" aria-label="Pane view">
-            <button type="button" aria-pressed={view === "chat"} onClick={() => { setView("chat"); setDrawerOpen(false); }} title={t("Chat transcript (⌘⇧J)")}>
+          <div className="segmented view-switch" role="group" aria-label="Pane view">{/* 三视图纯图标形(Kasm 对齐):文字只留 title 提示与 aria */}
+            <button type="button" aria-pressed={view === "chat"} aria-label={t("Chat")} onClick={() => { setView("chat"); setDrawerOpen(false); }} title={t("Chat transcript (⌘⇧J)")}>
               <MessageSquare />
-              <span className="header-desktop-only">{t("Chat")}</span>
             </button>
-            <button type="button" aria-pressed={view === "terminal"} onClick={() => { setView("terminal"); setDrawerOpen(false); }} title={terminalAttach ? t("Live terminal (⌘⇧J)") : t("Live terminal: coming to Windows PCs once herdr can attach there")}>
+            <button type="button" aria-pressed={view === "terminal"} aria-label={t("Terminal")} onClick={() => { setView("terminal"); setDrawerOpen(false); }} title={terminalAttach ? t("Live terminal (⌘⇧J)") : t("Live terminal: coming to Windows PCs once herdr can attach there")}>
               <SquareTerminal />
-              <span className="header-desktop-only">{t("Terminal")}</span>
               {!terminalAttach && <span className="pill pill-soon">{t("soon")}</span>}
             </button>
             {/* [v3 Kasm 融合] 桌面一等视图:选中实例(socket 机)可切 RFB 满铺面 */}
             {selectedMachine?.kind === "socket" && (
-              <button type="button" aria-pressed={view === "desktop"} onClick={() => { setView("desktop"); setDrawerOpen(false); }} title={t("Desktop")}>
+              <button type="button" aria-pressed={view === "desktop"} aria-label={t("Desktop")} onClick={() => { setView("desktop"); setDrawerOpen(false); }} title={t("Desktop")}>
                 <Monitor />
-                <span className="header-desktop-only">{t("Desktop")}</span>
               </button>
             )}
           </div>
