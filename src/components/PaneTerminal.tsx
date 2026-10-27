@@ -737,6 +737,20 @@ export function PaneTerminal({
       host.toggleAttribute("data-adopted-grid", adopted());
       const screen = term.element?.querySelector<HTMLElement>(".xterm-screen");
       if (!(adopted() || keyboardHeld) || panned || !screen) return;
+      // [v3] observe 态视觉铺满:grid 归远端 pty,本地容器大于 grid 时右/下
+      // 留空(总控台主操作面的「终端没铺满」)。等比放大画布至容器宽,原点
+      // 左上;仅放大不缩小(小 grid 缩成糊块不如留空可读),高度随宽等比,
+      // 底部余量由 --term-bg 同色吸收。
+      if (adopted() && screen) {
+        const scale = host.clientWidth > 0 && screen.offsetWidth > 0
+          ? Math.max(1, host.clientWidth / screen.offsetWidth) : 1;
+        const frame = term.element;
+        if (frame) {
+          frame.style.transformOrigin = "0 0";
+          frame.style.transform = scale > 1 ? `scale(${scale})` : "";
+          frame.style.width = scale > 1 ? `${100 / scale}%` : "";
+        }
+      }
       const row = screen.offsetHeight / term.rows;
       const cursorBottom = screen.offsetTop + (term.buffer.active.cursorY + 1) * row;
       const max = host.scrollHeight - host.clientHeight;
