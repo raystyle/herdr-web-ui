@@ -51,3 +51,18 @@ export function destroyInstance(publicId: string) {
 export function listInstances() {
   return call<{ instances?: InstanceRow[]; instance?: InstanceRow[] } | InstanceRow[]>("GET", "/instances")
 }
+
+/** [v3 Kasm 融合] 打检查点(ready 态;P0 证据保全配套) */
+export function checkpointInstance(publicId: string) {
+  return call<{ checkpointed: boolean }>("POST", `/instances/${encodeURIComponent(publicId)}/checkpoint`)
+}
+
+/** [v3 Kasm 融合] 恢复到最近检查点 */
+export function restoreCheckpoint(publicId: string) {
+  return call<InstanceRow>("POST", `/instances/${encodeURIComponent(publicId)}/checkpoint/restore`)
+}
+
+/** [v3 Kasm 融合] 重命名实例 */
+export function renameInstance(publicId: string, name: string) {
+  return call<InstanceRow>("PATCH", `/instances/${encodeURIComponent(publicId)}`, { name })
+}

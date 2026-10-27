@@ -33,3 +33,15 @@
   flex: 1;
   min-height: 0;
 }
+
+/* [v3 Kasm 融合] 实例行菜单的重命名表单(RowMenu header 挂载) */
+.machine-menu-rename {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem 0.5rem;
+}
+
+.machine-menu-rename .input {
+  min-width: 0;
+  flex: 1;
+}

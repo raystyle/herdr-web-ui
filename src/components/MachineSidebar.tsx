@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, FolderOpen, LogOut, Monitor, Plus, Settings, SlidersHorizontal, Undo2, X } from "lucide-react";
+import { Camera, ChevronDown, ChevronRight, ClipboardPaste, Ellipsis, FolderOpen, LogOut, Monitor, Pause, Pencil, Play, Plus, Settings, SlidersHorizontal, Trash2, Undo2, X } from "lucide-react";
 import type { Machine, MachineState, MachineUpdate } from "../../shared/machines.ts";
 import { MachineContext } from "../lib/machineContext.tsx";
 import { answerMachineSetup, machineRequest } from "../lib/api.ts";
@@ -9,6 +9,9 @@ import type { AppActions } from "../lib/actions.ts";
 import { Sidebar } from "./Sidebar.tsx";
 import { HxLogo } from "./HxLogo.tsx";
 import { InstanceLifecycleActions } from "./InstanceDialogs.tsx";
+import { RowMenu, type RowMenuItem } from "./RowMenu.tsx";
+import { onRowContextMenu } from "./Sidebar.tsx";
+import { checkpointInstance, destroyInstance, pauseInstance, renameInstance, restoreCheckpoint, wakeInstance } from "../lib/instanceLifecycle.ts";
 import { BRAND_NAME, controlConsole } from "../lib/controlMode.ts";
 import { AgentSidebar } from "./AgentSidebar.tsx";
 import { SidebarActivityProvider, useSidebarActivityState } from "../lib/sidebarActivity.tsx";
@@ -89,6 +92,20 @@ export function MachineSidebar(props: Props) {
 
 function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
   const t = useT();
+  // [v3 Kasm 融合] 实例行右键菜单(⋯ 钮同源):生命周期/桌面/文件/检查点集
+  const [menu, setMenu] = useState<{ anchor: HTMLElement; point?: { x: number; y: number } } | null>(null);
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [newName, setNewName] = useState(machine.name);
+  const publicId = machine.kind === "socket" ? machine.name.replace(/^instance-/, "") : null;
+  const lifecycleAct = async (fn: (id: string) => Promise<{ ok: boolean; error: string | null }>) => {
+    if (lifecycleBusy || publicId === null) return;
+    setLifecycleBusy(true);
+    const r = await fn(publicId);
+    setLifecycleBusy(false);
+    props.onInstancesChanged?.();
+    if (!r.ok && r.error) console.error(r.error);
+  };
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(`herdr-web-ui:pc-collapsed:${machine.id}`) === "1"; } catch { return false; } });
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(machine.name);
@@ -129,7 +146,7 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
   };
   // the PC's name is the head of its workspaces, and the caret beside its + the one fold over them
   return <section className={`machine-group${props.selectedMachineId === machine.id ? " is-current" : ""}${online ? "" : " is-offline"}`} aria-label={t("PC {name}", { name: machine.name })}>
-    <header className="machine-header">
+    <header className="machine-header" onContextMenu={machine.kind === "socket" ? (event) => onRowContextMenu(event, (anchor, point) => setMenu({ anchor, point })) : undefined}>
       <div className="machine-title">
         <span className="sidebar-mark" aria-hidden="true"><Monitor /></span>
         <span className="machine-name">{machine.name}</span>
@@ -157,6 +174,8 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
         <InstanceLifecycleActions publicId={machine.name.replace(/^instance-/, "")} connected={online} onActed={() => { props.onInstancesChanged?.(); }} />
       )}
       {machine.kind === "ssh" && <button className="sidebar-row-action machine-manage" aria-label={t("Manage {name}", { name: machine.name })} title={t("Manage PC")} aria-expanded={editing} onClick={() => { setEditing(!editing); setConfirmDelete(false); }}><SlidersHorizontal aria-hidden="true" /></button>}
+      {/* [v3 Kasm 融合] 实例行 ⋯ 菜单(触屏兜底;桌面走右键同源) */}
+      {machine.kind === "socket" && <button className="sidebar-row-action machine-manage row-menu-toggle" aria-label={t("Instance actions")} title={t("Instance actions")} aria-expanded={menu !== null} onClick={(event) => setMenu({ anchor: event.currentTarget })}><Ellipsis aria-hidden="true" /></button>}
       {/* the fold over this PC's workspaces sits beside the + */}
       <button className="sidebar-row-action machine-toggle" aria-expanded={!collapsed} aria-label={collapsed ? t("Expand {name}", { name: machine.name }) : t("Collapse {name}", { name: machine.name })} title={collapsed ? t("Expand {name}", { name: machine.name }) : t("Collapse {name}", { name: machine.name })} onClick={toggle}>{collapsed ? <ChevronRight aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}</button>
       <button className="sidebar-row-action machine-new" disabled={!online} aria-label={t("New workspace on {name}", { name: machine.name })} title={t("New workspace")} onClick={() => props.onNew(machine.id)}><Plus aria-hidden="true" /></button>
@@ -180,6 +199,26 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
       {confirmDelete && <p className="field-hint">{t("Removes this registration. Remote sessions keep running.")}</p>}
     </div>}
     {error && <p className="machine-error" role="alert">{error}</p>}
+    {/* [v3 Kasm 融合] 实例行菜单:桌面/文件/生命周期/检查点/重命名/销毁 */}
+    {menu !== null && publicId !== null && <RowMenu anchor={menu.anchor} point={menu.point} title={machine.name} subtitle={t(STATE_WORD[machine.state])}
+      onClose={() => { setMenu(null); setRenaming(false); }}
+      header={renaming ? (
+        <form className="machine-menu-rename" onSubmit={(e) => { e.preventDefault(); void lifecycleAct(async (id) => renameInstance(id, newName)); setRenaming(false); }}>
+          <input className="input" value={newName} maxLength={100} autoFocus onChange={(e) => setNewName(e.target.value)} aria-label={t("Instance name")} />
+          <button className="btn" type="submit" disabled={lifecycleBusy || newName.trim() === "" || newName === machine.name}>{t("Rename")}</button>
+        </form>
+      ) : undefined}
+      items={[
+        ...(props.onOpenDesktop && online ? [{ id: "desktop", label: t("Desktop"), icon: Monitor, run: () => { props.onOpenDesktop!(machine.name, publicId); } } as RowMenuItem] : []),
+        ...(props.onOpenFiles && online ? [{ id: "files", label: t("Files"), icon: FolderOpen, run: () => { props.onOpenFiles!(machine.name, publicId); } } as RowMenuItem] : []),
+        { id: "new", label: t("New workspace"), icon: Plus, run: () => { props.onNew(machine.id); } },
+        ...(online ? [{ id: "pause", label: t("Pause"), icon: Pause, divider: true, run: () => { void lifecycleAct((id) => pauseInstance(id)); } } as RowMenuItem]
+          : [{ id: "wake", label: t("Reconnect"), icon: Play, divider: true, run: () => { void lifecycleAct((id) => wakeInstance(id)); } } as RowMenuItem]),
+        ...(online ? [{ id: "checkpoint", label: t("Checkpoint"), icon: Camera, run: () => { void lifecycleAct((id) => checkpointInstance(id)); } } as RowMenuItem] : []),
+        { id: "rename", label: t("Rename"), icon: Pencil, run: () => { setNewName(machine.name); setRenaming(true); } },
+        ...(online ? [{ id: "restore", label: t("Restore checkpoint"), icon: ClipboardPaste, run: () => { void lifecycleAct((id) => restoreCheckpoint(id)); } } as RowMenuItem] : []),
+        { id: "destroy", label: t("Destroy"), icon: Trash2, danger: true, divider: true, run: () => { if (window.confirm(t("Destroy") + " " + publicId + "?")) void lifecycleAct((id) => destroyInstance(id)); } },
+      ]} />}
     {!collapsed && <div className={online ? "" : "machine-offline"} inert={!online}>
       {!online && !machine.snapshot ? <p className="tree-state machine-empty" role="status">{t("No saved sessions")}</p> : <MachineContext.Provider value={machine.id}><Sidebar snapshot={machine.snapshot} online={online} selectedPaneId={props.selectedMachineId === machine.id ? props.selectedPaneId : null} actions={actions} /></MachineContext.Provider>}
     </div>}
