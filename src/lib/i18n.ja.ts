@@ -199,9 +199,7 @@ export const JA: Record<string, string> = {
   "Phone": "スマートフォン",
   "Devices": "デバイス",
   "Phone & devices": "スマートフォンとデバイス",
-  "Install": "インストール",
   "Installed": "インストール済み",
-  "Install app": "アプリをインストール",
   "About": "情報",
   "Star on GitHub": "GitHub で Star する",
   "Remote PCs": "リモート PC",
@@ -814,12 +812,6 @@ export const JA: Record<string, string> = {
   "Terminal text size {px} px": "ターミナルの文字サイズ {px} px",
 
   // ---- install help ----
-  "Tap the Share button, then Add to Home Screen.": "共有ボタンをタップし、「ホーム画面に追加」を選択してください。",
-  "Open this page over HTTPS (or on localhost) to install it.": "インストールするには、このページを HTTPS (または localhost) で開いてください。",
-  "Firefox on desktop can't install web apps. Open this page in Chrome or Edge.": "デスクトップ版 Firefox では Web アプリをインストールできません。このページを Chrome または Edge で開いてください。",
-  "Open the browser menu, then Install app or Add to Home screen.": "ブラウザーのメニューを開き、「アプリをインストール」または「ホーム画面に追加」を選択してください。",
-  "Choose File, then Add to Dock.": "「ファイル」メニューから「Dock に追加」を選択してください。",
-  "Use the install icon in the address bar, or the browser menu's Install option.": "アドレスバーのインストールアイコン、またはブラウザーメニューのインストール項目を使用してください。",
 
   // ---- voice input ----
   "Without a key the browser recognizes the speech: Chrome and Edge send the audio to Google or Microsoft. Nothing is recorded until you press the mic.": "キーがない場合はブラウザが音声を認識します。Chrome と Edge は音声を Google または Microsoft に送信します。マイクを押すまで録音されません。",

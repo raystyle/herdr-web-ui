@@ -4,7 +4,6 @@ import { ArrowLeft, Bell, Check, ChevronRight, Gauge, Info, Keyboard, MessageSqu
 import "./SettingsDialog.css";
 
 import type { AppActions } from "../lib/actions.ts";
-import { useInstallPrompt } from "../lib/install.ts";
 import { SHORTCUTS, bindingDisplayKeys, formatKeys, isMacPlatform, setShortcutRecording, shortcutDisplayKeys, shortcutKeys, shortcutConflict, type ShortcutId } from "../lib/shortcuts.ts";
 import { MENU_SHORTCUT_KEYS, recordShortcut, shortcutMatchesQuery } from "../lib/shortcutRecorder.ts";
 import { exactChordRisk, isReservedShortcutKey, parseExactChord } from "../lib/shortcutBindings.ts";
@@ -835,7 +834,6 @@ function ShortcutsPage() {
 function DevicesPage({ auth, onSignOut }: { auth: HealthAuth | null; onSignOut: (() => Promise<void>) | null }) {
   const { settings, update } = useSettings();
   const t = useT();
-  const installPrompt = useInstallPrompt();
   // the server says what Tailscale on its PC already serves
   const [access, setAccess] = useState<RemoteAccess | null | undefined>(undefined);
   const loadAccess = useCallback(() => {
@@ -855,9 +853,6 @@ function DevicesPage({ auth, onSignOut }: { auth: HealthAuth | null; onSignOut: 
         <div className="settings-item"><PhonePanel plan={plan} loading={access === undefined} onRefresh={loadAccess} /></div>
         <SettingsRow label={t("Keep screen on")} description={<>{t("While a terminal or chat pane is open.")}{wakeLockProblem !== null && <span className="settings-condition">{wakeLockProblem}</span>}</>}>
           <Toggle label={t("Keep screen on")} checked={settings.keepScreenOn} onChange={(keepScreenOn) => update({ keepScreenOn })} />
-        </SettingsRow>
-        <SettingsRow label={t("Install")} description={installPrompt.installed ? t("Installed") : installPrompt.canInstall ? undefined : installPrompt.help}>
-          {!installPrompt.installed && installPrompt.canInstall && <button type="button" className="btn btn-primary" onClick={() => void installPrompt.install()}>{t("Install app")}</button>}
         </SettingsRow>
       </SettingsGroup>
 

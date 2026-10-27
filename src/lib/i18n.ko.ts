@@ -197,9 +197,7 @@ export const KO: Record<string, string> = {
   "Phone": "폰",
   "Devices": "기기",
   "Phone & devices": "폰 및 기기",
-  "Install": "설치",
   "Installed": "설치됨",
-  "Install app": "앱 설치",
   "About": "정보",
   "Star on GitHub": "GitHub에서 Star 누르기",
   "Remote PCs": "원격 PC",
@@ -812,12 +810,6 @@ export const KO: Record<string, string> = {
   "Terminal text size {px} px": "터미널 글자 크기 {px}px",
 
   // ---- install help ----
-  "Tap the Share button, then Add to Home Screen.": "공유 버튼을 누른 뒤 홈 화면에 추가를 선택하세요.",
-  "Open this page over HTTPS (or on localhost) to install it.": "설치하려면 이 페이지를 HTTPS(또는 localhost)로 여세요.",
-  "Firefox on desktop can't install web apps. Open this page in Chrome or Edge.": "데스크톱 Firefox는 웹 앱을 설치할 수 없습니다. Chrome이나 Edge로 여세요.",
-  "Open the browser menu, then Install app or Add to Home screen.": "브라우저 메뉴에서 앱 설치 또는 홈 화면에 추가를 선택하세요.",
-  "Choose File, then Add to Dock.": "파일 메뉴에서 Dock에 추가를 선택하세요.",
-  "Use the install icon in the address bar, or the browser menu's Install option.": "주소창의 설치 아이콘이나 브라우저 메뉴의 설치 항목을 쓰세요.",
 
   // ---- voice input ----
   "Without a key the browser recognizes the speech: Chrome and Edge send the audio to Google or Microsoft. Nothing is recorded until you press the mic.": "키가 없으면 브라우저가 음성을 인식합니다. Chrome과 Edge는 오디오를 Google이나 Microsoft로 보냅니다. 마이크를 누르기 전에는 녹음되지 않습니다.",

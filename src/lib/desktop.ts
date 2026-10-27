@@ -18,8 +18,11 @@ export async function fetchDesktopPassword(publicId: string): Promise<string | n
 }
 
 export function desktopWsUrl(publicId: string): string {
+  // [v3 修正] 走网关自带 VNC WS 面(/api/v1/instances/:id/vnc,同源免 Origin 摩
+  // 擦;网关拨实例 acpsup /vnc?display=desktop 并注入实例键)——原 /i/<id>/desktop
+  // 道依赖实例插件带 /desktop 桥(devswha 上游无此路由,恒 SPA 200 断连)。
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:"
-  return `${proto}//${window.location.host}/i/${encodeURIComponent(publicId)}/desktop`
+  return `${proto}//${window.location.host}/api/v1/instances/${encodeURIComponent(publicId)}/vnc`
 }
 
 export function reportResolution(publicId: string, width: number, height: number): void {

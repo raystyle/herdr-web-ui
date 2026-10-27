@@ -203,9 +203,7 @@ export const ZH: Record<string, string> = {
   "Phone": "手机",
   "Devices": "设备",
   "Phone & devices": "手机和设备",
-  "Install": "安装",
   "Installed": "已安装",
-  "Install app": "安装应用",
   "About": "关于",
   "Star on GitHub": "在 GitHub 上点 Star",
   "Remote PCs": "远程 PC",
@@ -818,12 +816,6 @@ export const ZH: Record<string, string> = {
   "Terminal text size {px} px": "终端文字大小 {px} px",
 
   // ---- install help ----
-  "Tap the Share button, then Add to Home Screen.": "点按“共享”按钮，然后选择“添加到主屏幕”。",
-  "Open this page over HTTPS (or on localhost) to install it.": "请通过 HTTPS（或 localhost）打开此页面以进行安装。",
-  "Firefox on desktop can't install web apps. Open this page in Chrome or Edge.": "桌面版 Firefox 无法安装 Web 应用。请在 Chrome 或 Edge 中打开此页面。",
-  "Open the browser menu, then Install app or Add to Home screen.": "打开浏览器菜单，然后选择“安装应用”或“添加到主屏幕”。",
-  "Choose File, then Add to Dock.": "选择“文件”，然后选择“添加到程序坞”。",
-  "Use the install icon in the address bar, or the browser menu's Install option.": "使用地址栏中的安装图标，或浏览器菜单中的“安装”选项。",
 
   // ---- voice input ----
   "Without a key the browser recognizes the speech: Chrome and Edge send the audio to Google or Microsoft. Nothing is recorded until you press the mic.": "没有密钥时由浏览器识别语音：Chrome 和 Edge 会把音频发送给 Google 或 Microsoft。按下麦克风前不会录音。",

@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Download, FolderOpen, LogOut, Monitor, Plus, Settings, SlidersHorizontal, Undo2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, FolderOpen, LogOut, Monitor, Plus, Settings, SlidersHorizontal, Undo2, X } from "lucide-react";
 import type { Machine, MachineState, MachineUpdate } from "../../shared/machines.ts";
 import { MachineContext } from "../lib/machineContext.tsx";
 import { answerMachineSetup, machineRequest } from "../lib/api.ts";
 import { describeProgress } from "../lib/bridgeProgress.ts";
 import { keepDismissed, noticeKey, readDismissed, waitingMachines, writeDismissed } from "../lib/machineNotice.ts";
 import type { AppActions } from "../lib/actions.ts";
-import { useInstallPrompt } from "../lib/install.ts";
 import { Sidebar } from "./Sidebar.tsx";
 import { HxLogo } from "./HxLogo.tsx";
 import { InstanceLifecycleActions } from "./InstanceDialogs.tsx";
@@ -41,8 +40,6 @@ interface Props { machines: Machine[]; selectedMachineId: string; selectedPaneId
 }
 export function MachineSidebar(props: Props) {
   const t = useT();
-  const { canInstall, installed, install, help } = useInstallPrompt();
-  const [installHelpOpen, setInstallHelpOpen] = useState(false);
   // both lists draw from it: live counters per PC (lib/sidebarActivity.tsx)
   const activity = useSidebarActivityState(props.machines);
   // the roster's wait is a live region that is in the list from its first render, clipped while empty (never
@@ -76,10 +73,6 @@ export function MachineSidebar(props: Props) {
     </div>
     <AgentSidebar machines={props.machines} selectedMachineId={props.selectedMachineId} selectedPaneId={props.selectedPaneId} stateWord={(machine) => t(STATE_WORD[machine.state])} onSelect={props.onSelect} />
     <footer className="sidebar-footer">
-      {/* browsers without an install prompt (iOS, plain HTTP) get the steps instead;
-          [v3] 总控台(容器舰队驾驶舱)不推 PWA 安装,消费端面留给实例页 */}
-      {!installed && !controlConsole && <button className="btn btn-ghost sidebar-footer-action" aria-expanded={canInstall ? undefined : installHelpOpen} onClick={() => { if (canInstall) void install(); else setInstallHelpOpen(!installHelpOpen); }}><Download aria-hidden="true" />{t("Install app")}</button>}
-      {!installed && !canInstall && !controlConsole && installHelpOpen && <p className="sidebar-install-help" role="status">{help}</p>}
       <div className="sidebar-footer-row">
         {/* [v3] 基址部署(总控/实例代理)下的返回道:绝对 / 跳出 base-path 回网关壳 SPA */}
         {window.location.pathname.replace(/\/[^/]*$/, "") !== "" && (

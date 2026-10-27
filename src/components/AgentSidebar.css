@@ -303,7 +303,7 @@
   cursor: pointer;
 }
 
-.agent-tree-node:hover { background: var(--side-hover, rgba(127, 127, 127, 0.12)); }
+.agent-tree-node:hover { background: var(--side-hover); }
 .agent-tree-node:focus-visible { outline: 2px solid var(--accent, currentColor); outline-offset: -2px; }
 
 .agent-tree-caret { flex: none; width: 14px; height: 14px; opacity: 0.7; }
