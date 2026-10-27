@@ -42,10 +42,18 @@ export function sameOrigin(request: Request): boolean {
     // Reverse proxies commonly terminate HTTPS; do not trust arbitrary forwarded hosts.
     // Traefik uses "wss" for a secure WebSocket upgrade, whose browser Origin is still https.
     const proto = request.headers.get("x-forwarded-proto");
-    const websocket = request.method === "GET" && expected.pathname === "/ws"
+    // [v3] WS 升级道:/ws(会话流)与 /desktop(桌面 RFB 桥)同律——浏览器
+    // WS 升级必带 Origin;经网关代理(/i/<id>/…)时,Host 是回环拨号口而
+    // Origin 是网关公网面,须采 X-Forwarded-Host 还原原始请求面再比。
+    const websocket = request.method === "GET" && (expected.pathname === "/ws" || expected.pathname === "/desktop")
       && request.headers.get("upgrade")?.toLowerCase() === "websocket"
       && request.headers.get("connection")?.split(",").some((part) => part.trim().toLowerCase() === "upgrade");
     if (proto === "https" || (proto === "wss" && websocket)) expected.protocol = "https:";
+    const fwdHost = request.headers.get("x-forwarded-host");
+    if (websocket && fwdHost) {
+      // 仅 WS 道(浏览器升级请求)采信反代声明;host:port 或裸 host 皆可
+      try { expected.host = fwdHost.split(",")[0].trim(); } catch { /* 坏头按原 host 比 */ }
+    }
     return new URL(origin).origin === expected.origin;
   } catch { return false; }
 }
