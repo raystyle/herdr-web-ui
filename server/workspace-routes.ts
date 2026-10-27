@@ -16,8 +16,9 @@ import { badRequest, conflictResponse, errorResponse, isJsonObject, jsonResponse
 import { paneContext } from "./pane-routes.ts";
 import { repoDiffResponse } from "./repo-diff.ts";
 
-function expandedDirectory(value: string): string | null {
+function expandedDirectory(value: string, options: { skipStat?: boolean } = {}): string | null {
   const expanded = value === "~" ? homedir() : value.startsWith("~/") ? resolve(homedir(), value.slice(2)) : resolve(value);
+  if (options.skipStat) return expanded;
   try {
     return statSync(expanded).isDirectory() ? expanded : null;
   } catch {
@@ -96,7 +97,11 @@ export async function handleWorkspaceRequest(request: Request, url: URL, pathnam
     if (payload.label === null) delete payload.label;
     if (payload.agent === null) delete payload.agent;
     if (payload.cwd !== undefined && typeof payload.cwd !== "string") return badRequest("invalid_cwd", "cwd must be an existing directory");
-    const cwd = payload.cwd === undefined ? undefined : expandedDirectory(payload.cwd);
+    // [v3] 远端桥(remote-entry 代 socket-machine):cwd 在远端容器,本地
+    // statSync 必然打空——只做形式归一(resolve/~),存在性交给远端 herdr 的
+    // workspace.create/tab.create 校验。本机桥行为不变。
+    const remoteBridge = process.env["HERDR_WEB_REMOTE_BRIDGE"] === "1";
+    const cwd = payload.cwd === undefined ? undefined : remoteBridge ? expandedDirectory(payload.cwd, { skipStat: true }) : expandedDirectory(payload.cwd);
     if (payload.cwd !== undefined && cwd === null) return badRequest("invalid_cwd", "cwd must be an existing directory");
     if (payload.label !== undefined && typeof payload.label !== "string") return badRequest("missing_label", "label must be a string");
     if (typeof payload.label === "string") {

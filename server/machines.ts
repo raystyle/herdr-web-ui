@@ -820,6 +820,13 @@ export class MachineManager {
         const bridge = await ensureSocketBridge(runtime.machine.socketPath!);
         if (generation !== runtime.generation || this.stopped) return;
         runtime.endpoint = { url: bridge.url, token: bridge.token };
+        // [v3] ssh 型在 verify() 里拿 /api/bridge identity 填 machine.herdr,
+        // socket 型没走那条——角标 targetHerdr 恒空,右上角恒「herdr 离线」。
+        // 桥起来后同源补一次;失败不阻连(offline 角标但链可用)。
+        try {
+          const r = await fetch(bridge.url + "/api/bridge", { headers: { authorization: `Bearer ${bridge.token}` }, signal: AbortSignal.timeout(10_000) });
+          if (r.ok) runtime.machine.herdr = ((await r.json()) as { herdr?: Machine["herdr"] }).herdr ?? runtime.machine.herdr;
+        } catch { /* identity 尽力而为 */ }
         await this.observe(runtime); this.emit();
       } catch (e) { this.lost(runtime, generation, e); }
       return;

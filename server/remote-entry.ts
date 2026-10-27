@@ -103,6 +103,10 @@ try {
   const info = await bridgeIdentity();
   if (info.herdr.protocol < 22) throw new Error("herdr 0.9+ is required; update it explicitly before connecting");
   const token = randomBytes(32).toString("hex");
+  // [v3] externalSocket:本进程是远端 machine 的桥,workspace 路由的本地
+  // statSync cwd 校验对它无意义(目录在远端容器)——标记放行,校验交给
+  // 远端 herdr 的 workspace.create。缺省(本机 herdr 桥)行为不变。
+  if (externalSocket) process.env["HERDR_WEB_REMOTE_BRIDGE"] = "1";
   const server = createServer({ port: 0, hostname: "127.0.0.1", token, machines: false, stateDir: descriptor + ".state" });
   const registration = registerBridge(server.port, token);
   const close = () => { registration.close(); server.stop(); setTimeout(() => process.exit(0), 2000); };
