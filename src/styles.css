@@ -1989,8 +1989,9 @@ button {
   flex: 0 0 auto;
 }
 
-/* From 769px the lens switch is its two words and nothing around them: no track, no glyphs, the
-   chosen lens on the hover fill. Files follows it as an action of its own, after a hairline. */
+/* From 769px the lens switch is icon-only with the hover fill (v3 Kasm form: the words went,
+   only title/aria remain), so the glyphs must stay — the old hide rule died with the words.
+   Trackless like the icon-buttons around it; the active lens keeps the selection color. */
 @media (min-width: 769px) {
   .app-header .view-switch {
     padding: 0;
@@ -1998,8 +1999,11 @@ button {
     border-color: transparent;
   }
 
-  .app-header .view-switch > button svg {
-    display: none;
+  .app-header .view-switch > button {
+    padding: 0;
+    width: var(--control-h);
+    justify-content: center;
+    color: var(--text-dim);
   }
 }
 
