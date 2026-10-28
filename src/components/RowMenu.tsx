@@ -34,6 +34,8 @@ export interface RowMenuItem {
   danger?: boolean;
   /** the item that stands for what is open now (a pane picker's current pane) */
   current?: boolean;
+  /** [v3] 项执行后菜单保持开(内联编辑形:重命名开表单等);缺省执行即关 */
+  keepOpen?: boolean;
   /** a switch's state, when the item is one: it is then a checkbox item (a pressed button in the sheet), not a plain item */
   checked?: boolean;
   run: () => void;
@@ -177,7 +179,7 @@ export function RowMenu({ anchor, point, restoreFocusTo, title, subtitle, detail
   const keepFocus = (event: ReactMouseEvent<HTMLButtonElement>): void => event.preventDefault();
 
   const run = (item: RowMenuItem): void => {
-    onClose();
+    if (!item.keepOpen) onClose();
     item.run();
   };
 

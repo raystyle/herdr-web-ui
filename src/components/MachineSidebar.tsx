@@ -215,7 +215,7 @@ function MachineGroup({ machine, ...props }: Props & { machine: Machine }) {
         ...(online ? [{ id: "pause", label: t("Pause"), icon: Pause, divider: true, run: () => { void lifecycleAct((id) => pauseInstance(id)); } } as RowMenuItem]
           : [{ id: "wake", label: t("Reconnect"), icon: Play, divider: true, run: () => { void lifecycleAct((id) => wakeInstance(id)); } } as RowMenuItem]),
         ...(online ? [{ id: "checkpoint", label: t("Checkpoint"), icon: Camera, run: () => { void lifecycleAct((id) => checkpointInstance(id)); } } as RowMenuItem] : []),
-        { id: "rename", label: t("Rename"), icon: Pencil, run: () => { setNewName(machine.name); setRenaming(true); } },
+        { id: "rename", label: t("Rename"), icon: Pencil, keepOpen: true, run: () => { setNewName(machine.name); setRenaming(true); } },
         ...(online ? [{ id: "restore", label: t("Restore checkpoint"), icon: ClipboardPaste, run: () => { void lifecycleAct((id) => restoreCheckpoint(id)); } } as RowMenuItem] : []),
         { id: "destroy", label: t("Destroy"), icon: Trash2, danger: true, divider: true, run: () => { if (window.confirm(t("Destroy") + " " + publicId + "?")) void lifecycleAct((id) => destroyInstance(id)); } },
       ]} />}

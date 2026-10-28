@@ -1042,6 +1042,9 @@ export function App() {
   // its lens picked by hand) the pane is back on the lens it had. A shell has no conversation to
   // show (storedView), so its alert opens its own lens; until the snapshot says, it counts as an agent
   if (notificationView !== null && !(notificationView === "chat" && selectedPane !== null && selectedAgent === null)) view = notificationView;
+  // [v3 Kasm 融合 review F1] 单 RFB 纪律:embedded 桌面视图打开时收掉 dock 形
+  // (同一 publicId 双 RFB 会互抢分辨率档)。副作用走 effect,不在渲染期 setState。
+  useEffect(() => { if (view === "desktop") setDesktopDock(null); }, [view]);
   // [v3 Kasm 融合] 桌面是机器级透传视图:storedView 只认 chat/terminal,
   // 换 pane/换机会把 lens 归一到存储值;切到 desktop 后选中态在 lens 里
   // 存续直到下一次显式切换(不写 localStorage,刷新回上次 pane 视图)。
