@@ -1621,8 +1621,8 @@ export function App() {
         ) : (
           <><Brand /><span className="machine-context-name">{selectedMachine?.name ?? selectedMachineId}</span></>
         )}
-        {selectedPane && (
-          <div className="segmented view-switch" role="group" aria-label="Pane view">{/* 三视图纯图标形(Kasm 对齐):文字只留 title 提示与 aria */}
+        {(selectedPane !== null || selectedMachine?.kind === "socket") && (
+          <div className="segmented view-switch" role="group" aria-label="Pane view">{/* 三段常驻:desktop 机器级随时可切;chat/terminal pane 级,无 pane 切=下次选中生效 */}{/* 三视图纯图标形(Kasm 对齐):文字只留 title 提示与 aria */}
             <button type="button" aria-pressed={view === "chat"} aria-label={t("Chat")} onClick={() => { setView("chat"); setDrawerOpen(false); }} title={t("Chat transcript (⌘⇧J)")}>
               <MessageSquare />
             </button>
