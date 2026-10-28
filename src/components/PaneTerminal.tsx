@@ -736,31 +736,13 @@ export function PaneTerminal({
     const followCursor = (): void => {
       host.toggleAttribute("data-adopted-grid", adopted());
       const screen = term.element?.querySelector<HTMLElement>(".xterm-screen");
-      // [v3 review F4(二审)] 清理在 guard 之前:interact 态(非 adopted 非
-      // keyboardHeld)原本提前 return,残留在后面清=不可达。transform 内联
-      // 样式 fit 不会清,角色切回 interact 就在这里清;panned 的 adopted
-      // 分支不清(用户手滚时保持 grid 现状)。
-      const frame = term.element;
-      const grid = adopted() && screen && host.clientWidth > 0 && screen.offsetWidth > 0;
-      if (frame && !adopted()) {
-        frame.style.transform = "";
-        frame.style.width = "";
-      }
       if (!(adopted() || keyboardHeld) || panned || !screen) return;
-      // [v3] observe 态视觉铺满:grid 归远端 pty,本地容器大于 grid 时右/下
-      // 留空(总控台主操作面的「终端没铺满」)。等比放大画布至容器宽,原点
-      // 左上;仅放大不缩小(小 grid 缩成糊块不如留空可读),高度随宽等比,
-      // 底部余量由 --term-bg 同色吸收。
-      if (frame && grid) {
-        const scale = Math.max(1, host.clientWidth / screen.offsetWidth);
-        frame.style.transformOrigin = "0 0";
-        frame.style.transform = scale > 1 ? `scale(${scale})` : "";
-        frame.style.width = scale > 1 ? `${100 / scale}%` : "";
-      }
-      // [v3 review F4] 放大态滚动坐标同乘 scale(否则自动跟随把 prompt 留屏外)
-      const rowScale = frame && frame.style.transform ? host.clientWidth / (screen.offsetWidth || 1) : 1;
-      const row = (screen.offsetHeight / term.rows) * rowScale;
-      const cursorBottom = (screen.offsetTop + (term.buffer.active.cursorY + 1) * (screen.offsetHeight / term.rows)) * rowScale;
+      // [v3 撤] observe 态 scale 铺满 hack 已撤(实测撑破布局:初始即出
+      // 横竖滚动条,滚动语义错乱)。恢复上游原生行为:grid 归远端 pty,
+      // 容器大于 grid 时留白由 --term-bg 吸收;真正的铺满要远端 resize
+      // 协议(interact 化),另批。
+      const row = screen.offsetHeight / term.rows;
+      const cursorBottom = screen.offsetTop + (term.buffer.active.cursorY + 1) * row;
       const max = host.scrollHeight - host.clientHeight;
       host.scrollTop = cursorBottom <= host.clientHeight ? 0 : cursorBottom - row >= max ? max : cursorBottom - host.clientHeight;
     };
