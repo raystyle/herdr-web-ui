@@ -736,26 +736,29 @@ export function PaneTerminal({
     const followCursor = (): void => {
       host.toggleAttribute("data-adopted-grid", adopted());
       const screen = term.element?.querySelector<HTMLElement>(".xterm-screen");
+      // [v3 review F4(二审)] 清理在 guard 之前:interact 态(非 adopted 非
+      // keyboardHeld)原本提前 return,残留在后面清=不可达。transform 内联
+      // 样式 fit 不会清,角色切回 interact 就在这里清;panned 的 adopted
+      // 分支不清(用户手滚时保持 grid 现状)。
+      const frame = term.element;
+      const grid = adopted() && screen && host.clientWidth > 0 && screen.offsetWidth > 0;
+      if (frame && !adopted()) {
+        frame.style.transform = "";
+        frame.style.width = "";
+      }
       if (!(adopted() || keyboardHeld) || panned || !screen) return;
       // [v3] observe 态视觉铺满:grid 归远端 pty,本地容器大于 grid 时右/下
       // 留空(总控台主操作面的「终端没铺满」)。等比放大画布至容器宽,原点
       // 左上;仅放大不缩小(小 grid 缩成糊块不如留空可读),高度随宽等比,
-      // 底部余量由 --term-bg 同色吸收。interact 态显式清残留(review F4:
-      // transform 内联样式 fit 不会清,角色切换会泄漏旧缩放)。
-      const frame = term.element;
-      if (frame) {
-        if (adopted() && screen && host.clientWidth > 0 && screen.offsetWidth > 0) {
-          const scale = Math.max(1, host.clientWidth / screen.offsetWidth);
-          frame.style.transformOrigin = "0 0";
-          frame.style.transform = scale > 1 ? `scale(${scale})` : "";
-          frame.style.width = scale > 1 ? `${100 / scale}%` : "";
-        } else {
-          frame.style.transform = "";
-          frame.style.width = "";
-        }
+      // 底部余量由 --term-bg 同色吸收。
+      if (frame && grid) {
+        const scale = Math.max(1, host.clientWidth / screen.offsetWidth);
+        frame.style.transformOrigin = "0 0";
+        frame.style.transform = scale > 1 ? `scale(${scale})` : "";
+        frame.style.width = scale > 1 ? `${100 / scale}%` : "";
       }
       // [v3 review F4] 放大态滚动坐标同乘 scale(否则自动跟随把 prompt 留屏外)
-      const rowScale = frame ? (frame.style.transform ? host.clientWidth / (screen.offsetWidth || 1) : 1) : 1;
+      const rowScale = frame && frame.style.transform ? host.clientWidth / (screen.offsetWidth || 1) : 1;
       const row = (screen.offsetHeight / term.rows) * rowScale;
       const cursorBottom = (screen.offsetTop + (term.buffer.active.cursorY + 1) * (screen.offsetHeight / term.rows)) * rowScale;
       const max = host.scrollHeight - host.clientHeight;
