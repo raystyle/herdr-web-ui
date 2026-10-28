@@ -40,6 +40,7 @@ import { DesktopPanel } from "./components/DesktopPanel.tsx";
 import { InstanceFilesPanel } from "./components/InstanceFilesPanel.tsx";
 import { listInstances } from "./lib/instanceLifecycle.ts";
 import { NewInstanceDialog } from "./components/InstanceDialogs.tsx";
+import { HxLogo } from "./components/HxLogo.tsx";
 import { LoginGate, probeSession } from "./components/LoginGate.tsx";
 import { takeAuthTokenFromUrl } from "./lib/authLink.ts";
 import { applyPaneStatus } from "./lib/snapshot.ts";
@@ -1619,7 +1620,7 @@ export function App() {
             </div>
           </div>
         ) : (
-          <><Brand /><span className="machine-context-name">{selectedMachine?.name ?? selectedMachineId}</span></>
+          <><HxLogo size={20} /><span className="machine-context-name">{selectedMachine?.name ?? selectedMachineId}</span></>
         )}
         {(selectedPane !== null || selectedMachine?.kind === "socket") && (
           <div className="segmented view-switch" role="group" aria-label="Pane view">{/* 三段常驻:desktop 机器级随时可切;chat/terminal pane 级,无 pane 切=下次选中生效 */}{/* 三视图纯图标形(Kasm 对齐):文字只留 title 提示与 aria */}
